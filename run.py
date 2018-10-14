@@ -3,7 +3,7 @@
 
 # importing the basic library
 from __future__ import print_function
-import sys
+import sys, os
 
 sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地址之一
 
@@ -67,10 +67,12 @@ OURS_modified = ConvNet(conv_params = {'kernel': ((1,16), (1,8), (1,8), (1,8)),
 Solver = Solver_nd(model = OURS_modified, 
                    train = train,
                    test = test,
-                   SNR = 1, 
-                   num_epoch=20, 
+                   SNR = 1, #   params = params_tl,
+                   num_epoch=10, 
                    batch_size = 256
-                   ,  lr_rate=0.0003)
+                   ,  lr_rate=0.0003
+                  ,save_checkpoints_address = './checkpoints/test/'
+                  ,checkpoint_name = 'test')
 
 
 Solver.Training()
