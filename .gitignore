@@ -1,4 +1,14 @@
+
+# https://www.cnblogs.com/kevingrace/p/5690241.html
 # DIY-begin
+data/
+data_SNRmf/
+detector_strain/
+Panyi_code/
+pretrained_models/
+__pycache__/
+.ipynb_checkpoints/
+
 
 # DIY-end
 
