@@ -37,11 +37,18 @@ class ConvNet(object):
         - dtype: numpy datatype to use for computation.
         """
         self.params = {}
+        self.structure = {'params_inits' : params_inits,
+                          'conv_params' : conv_params,
+                          'act_params' : act_params,
+                          'pool_params' : pool_params,
+                          'fc_params' : fc_params}
+        self.structure.update(kwargs)
         self.input_dim = kwargs.pop('input_dim', (1, 1, 8192))
         self.output_dim = kwargs.pop('output_dim', 2)
         self.drop_prob = kwargs.pop('drop_prob', 0)
         
         self.dtype = kwargs.pop('dtype', None)
+
         
         try: 
             check_dict_dim(conv_params) 

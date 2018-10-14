@@ -229,6 +229,8 @@ class Solver_nd(object):
         self.train_ori = train
         self.test_ori = test
         self.peak_samppoint, self.peak_time = cal_peak_nd(train)
+        self.train_shift_list = []
+        self.test_shift_list = []        
 
         try:
             assert self.train_ori.shape == self.test_ori.shape
@@ -246,6 +248,7 @@ class Solver_nd(object):
         self.num_epoch = kwargs.pop('num_epoch', 10)
         self.smoothing_constant = kwargs.pop('smoothing_constant', 0.01)
         
+        self.save_checkpoints_address = kwargs.pop('save_checkpoints_address', './checkpoints/')
         self.checkpoint_name = kwargs.pop('checkpoint_name', None)
         self.verbose = kwargs.pop('verbose', False)
         self.oldversion = kwargs.pop('oldversion', False)
@@ -307,12 +310,16 @@ class Solver_nd(object):
 
 
     def _random_data(self):
+        
+        self.train, train_shift_list = shuffle_data_nd(self.train_ori,self.peak_samppoint, self.peak_time, 10)
+        self.test, test_shift_list = shuffle_data_nd(self.test_ori,self.peak_samppoint, self.peak_time, 10)
 
-        self.train = shuffle_data_nd(self.train_ori,self.peak_samppoint, self.peak_time, 10).reshape(self.train_ori.shape[0]*10,self.num_channel,-1)
-        self.test = shuffle_data_nd(self.test_ori,self.peak_samppoint, self.peak_time, 10).reshape(self.test_ori.shape[0]*10,self.num_channel,-1)
-        print('finish random data~')
-
-
+        self.train_shift_list.extend(train_shift_list.asnumpy().tolist())
+        self.test_shift_list.extend(test_shift_list.asnumpy().tolist())
+        self.train = self.train.reshape(self.train_ori.shape[0]*10,self.num_channel,-1)
+        self.test = self.test.reshape(self.test_ori.shape[0]*10,self.num_channel,-1)
+        
+        
     def _reset_data(self):
         
         try:
@@ -425,21 +432,25 @@ class Solver_nd(object):
                 self.train_acc_history.append(self.check_acc(self.train_data))
                 val_acc = self.check_acc(self.test_data)
                 self.test_acc_history.append(val_acc)
-                self._save_checkpoint()
+
 
 
                 if val_acc >= self.best_test_acc:
                     self.best_test_acc = val_acc
                     self.best_params = {}
+                    self.best_params_epoch = 0
+                    self.findabest = 0
                     for k, v in self.model.params.items():
                         self.best_params[k] = v.copy()
-
+                        self.best_params_epoch = epoch
+                        self.findabest = 1
                 if self.verbose:
                     pass
     #                 print('{"metric": "Train_acc. for SNR=%s in epoches", "value": %.4f}' %(str(SNR), train_accuracy) )
     #                 print('{"metric": "Test_acc. for SNR=%s in epoches", "value": %.4f}' %(str(SNR), test_accuracy) )
                 else:
                     print("Epoch {:d}, Moving_loss: {:.6f}, Epoch_loss(mean): {:.6f}, Train_acc {:.4f}, Test_acc {:.4f}(Best:{:.4f})".format(epoch, self.moving_loss_history[-1], np.mean(self.Epoch_loss), self.train_acc_history[-1], self.test_acc_history[-1], self.best_test_acc))
+                    self._save_checkpoint()
 
 #                     self.mb.first_bar.comment = f'first bar stat'
 #                     self.mb.write(f'Finished loop {epoch}')
@@ -519,7 +530,7 @@ class Solver_nd(object):
     def gen_noise(self):
         
         if ctx == mx.gpu():
-            noise, _ = TimeseriesFromPSD_nd(self.param_noise).reshape((-1,self.num_channel,8192))
+            noise, _ = TimeseriesFromPSD_nd(self.param_noise)
         elif ctx == mx.cpu():
             noise, _ = TimeseriesFromPSD(self.param_noise)
             noise = nd.array(noise)
@@ -530,18 +541,13 @@ class Solver_nd(object):
 
     def _reset_noise(self):
         
-        print(self.train.shape, self.train.shape)
-
         # noise for mixing
         noise = self.gen_noise()
-        print(noise.shape)
 
         try: sigma = self.train.max(axis = 2) / float(self.SNR) / nd.array(noise[:self.train_size].asnumpy().std(axis = 2,dtype='float64'),ctx=ctx)
         except: sigma = self.train.max(axis = -1) / float(self.SNR) / nd.array(noise[:self.train_size].asnumpy().std(axis = -1,dtype='float64'),ctx=ctx)            
         self.sigma = sigma
-        print(self.sigma.shape)
         signal_train = nd.divide(self.train, sigma.reshape((self.train_size,self.num_channel,-1)))
-        print(signal_train.shape)
         data_train = signal_train + noise[:self.train_size]
         
         try: sigma = self.test.max(axis = 2) / float(self.SNR) / nd.array(noise[-self.test_size:].asnumpy().std(axis = 2,dtype='float64'),ctx=ctx)
@@ -549,7 +555,6 @@ class Solver_nd(object):
         signal_test = nd.divide(self.test, sigma.reshape((self.test_size,self.num_channel,-1)))    
         data_test = signal_test + noise[-self.test_size:]
         
-        print(data_train.shape, data_test.shape)
 
         # noise for pure conterpart
         noise = self.gen_noise()
@@ -564,7 +569,7 @@ class Solver_nd(object):
         except: dataset_test = gluon.data.ArrayDataset(X_test, self.y_test)
         self.test_data = gluon.data.DataLoader(dataset_test, self.batch_size, shuffle=True, last_batch='keep')
         
-        print(X_train.shape, X_test.shape)
+
     
     def check_acc(self, data_iterator):
         numerator = 0.
@@ -585,24 +590,38 @@ class Solver_nd(object):
             return
         
         checkpoint = {
-          'model': self.model,
 #           'update_rule': self.update_rule,
-          'lr_decay': self.lr_decay,
+          'lr_decay': nd.array([self.lr_decay]),
+          'lr_rate': nd.array([self.lr_rate]),
 #           'optim_config': self.optim_config,
-          'batch_size': self.batch_size,
+          'batch_size': nd.array([self.batch_size]),
 #           'num_train_samples': self.num_train_samples,
 #           'num_val_samples': self.num_val_samples,
-          'epoch': self.epoch,
-          'loss_history': self.loss_history,
-          'loss_v_history': self.loss_v_history,
-          'moving_loss_history': self.moving_loss_history,
-          'train_acc_history': self.train_acc_history,
-          'test_acc_history': self.test_acc_history,
+          'train_shift_list': nd.array(self.train_shift_list),
+          'test_shift_list': nd.array(self.test_shift_list),
+          'num_epoch': nd.array([self.num_epoch]),
+          'epoch': nd.array([self.epoch]),
+          'loss_history': nd.array(self.loss_history),
+          'loss_v_history': nd.array(self.loss_v_history),
+          'moving_loss_history': nd.array(self.moving_loss_history),
+          'train_acc_history': nd.array(self.train_acc_history),
+          'test_acc_history': nd.array(self.test_acc_history),
         }
         
-        filename = '%s_epoch_%d.pkl' % (self.checkpoint_name, self.epoch)
-        nd.save(filename, checkpoint)
-        
+        file_address = self.save_checkpoints_address
+        # save the model modification
+        if self.epoch == 1: 
+            os.system('mkdir -p %s' %file_address)
+            np.save(file_address+ '%s_structure_epoch.pkl' %(self.checkpoint_name) ,self.model.structure)    
+        # save the best params
+        if self.findabest:
+            os.system('rm -rf '+file_address+'%s_best_params_epoch@*' %self.checkpoint_name)
+            nd.save(file_address+'%s_best_params_epoch@%s.pkl' %(self.checkpoint_name, self.best_params_epoch) , self.best_params)
+            self.findabest = 0
+        # save all the parsms during the training
+        nd.save(file_address+'%s_params_epoch@%s.pkl' %(self.checkpoint_name, self.epoch), self.model.params)
+        # save the processing info. within the training
+        nd.save(file_address+'%s_info.pkl' %(self.checkpoint_name), checkpoint)
     
     
     def predict_nd(self):
