@@ -428,11 +428,10 @@ class Solver_nd(object):
                 else: self._reset_noise()
 
                 self._iteration(t, epoch)
-
+                
                 self.train_acc_history.append(self.check_acc(self.train_data))
                 val_acc = self.check_acc(self.test_data)
                 self.test_acc_history.append(val_acc)
-
 
 
                 if val_acc >= self.best_test_acc:
@@ -444,13 +443,14 @@ class Solver_nd(object):
                         self.best_params[k] = v.copy()
                         self.best_params_epoch = epoch
                         self.findabest = 1
+
                 if self.verbose:
-                    pass
-    #                 print('{"metric": "Train_acc. for SNR=%s in epoches", "value": %.4f}' %(str(SNR), train_accuracy) )
-    #                 print('{"metric": "Test_acc. for SNR=%s in epoches", "value": %.4f}' %(str(SNR), test_accuracy) )
+                    print('{"metric": "Train_acc. for SNR=%s in epoches", "value": %.4f}' %(str(self.SNR), self.train_acc_history[-1]) )
+                    print('{"metric": "Test_acc. for SNR=%s in epoches", "value": %.4f}' %(str(self.SNR), self.test_acc_history[-1]) )
                 else:
                     print("Epoch {:d}, Moving_loss: {:.6f}, Epoch_loss(mean): {:.6f}, Train_acc {:.4f}, Test_acc {:.4f}(Best:{:.4f})".format(epoch, self.moving_loss_history[-1], np.mean(self.Epoch_loss), self.train_acc_history[-1], self.test_acc_history[-1], self.best_test_acc))
-                    self._save_checkpoint()
+                    
+                self._save_checkpoint()
 
 #                     self.mb.first_bar.comment = f'first bar stat'
 #                     self.mb.write(f'Finished loop {epoch}')
@@ -491,11 +491,10 @@ class Solver_nd(object):
             self.Epoch_loss.append(curr_loss)
 
             if self.verbose:
-                pass
-            # print('{"metric": "Training Loss for ALL", "value": %.5f}' %(curr_loss*1.0) )
-            # print('{"metric": "Testing Loss for ALL", "value": %.5f}' %(curr_loss_v*1.0) )
-#             print('{"metric": "Training Loss for SNR=%s", "value": %.5f}' %(str(SNR), curr_loss*1.0) )
-#             print('{"metric": "Testing Loss for SNR=%s", "value": %.5f}' %(str(SNR), curr_loss_v*1.0) )            
+                print('{"metric": "Training Loss for ALL", "value": %.5f}' %(curr_loss*1.0) )
+                print('{"metric": "Testing Loss for ALL", "value": %.5f}' %(curr_loss_v*1.0) )
+                print('{"metric": "Training Loss for SNR=%s", "value": %.5f}' %(str(self.SNR), curr_loss*1.0) )
+                print('{"metric": "Testing Loss for SNR=%s", "value": %.5f}' %(str(self.SNR), curr_loss_v*1.0) )            
             else:
                 print('Working on epoch {:d}. Curr_loss: {:.5f} (complete percent: {:.2f}/100)'.format(epoch, curr_loss*1.0, 1.0 * batch_i / (self.train_size/self.batch_size) * 100/ 2) , end='')
                 sys.stdout.write("\r")

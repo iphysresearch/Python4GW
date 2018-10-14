@@ -12,3 +12,16 @@ var
 *.pyc
 *.swp
 .DS_Store
+
+data/
+data_SNRmf/
+detector_strain/
+Panyi_code/
+pretrained_models/
+__pycache__/
+.ipynb_checkpoints/
+.pytest_cache/
+.tox/
+.vscode/
+*.ipynb
+*.dat

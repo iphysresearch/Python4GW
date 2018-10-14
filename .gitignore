@@ -8,6 +8,9 @@ Panyi_code/
 pretrained_models/
 __pycache__/
 .ipynb_checkpoints/
+.pytest_cache/
+.tox/
+.vscode/
 
 
 # DIY-end

@@ -51,42 +51,38 @@ test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 ## Training
 # params_tl  = None
 # for snr in list([1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
-
-# params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_8_best_params_epoch@16.pkl')
-# for snr in list([0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
-params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_5_best_params_epoch@9.pkl')
-SNR_list = [0.4, 0.3, 0.2, 0.1]
+params_tl  = nd.load('/floyd/input/pretrained/PLB/snr_8_best_params_epoch@2.pkl')
+SNR_list = [0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
 i = 0
 while True:
     try:
         snr = SNR_list[i]
     except IndexError:
         break
-
-    OURS_ori = ConvNet(conv_params = {'kernel': ((1,16), (1,8), (1,8)), 
-                                        'num_filter': (16, 32, 64,),
-                                        'stride': ((1,1), (1,1), (1,1),),
-                                        'padding': ((0,0), (0,0), (0,0),),
-                                        'dilate': ((1,1), (1,1), (1,1),)},
-                            act_params = {'act_type': ('relu', 'relu', 'relu', 'relu',)},
-                            pool_params = {'pool_type': ('avg', 'avg', 'avg',),
-                                        'kernel': ((1,16), (1,16), (1,16),),
-                                        'stride': ((1,2), (1,2), (1,2),),
-                                        'padding': ((0,0),(0,0), (0,0),),
-                                        'dilate': ((1,1), (1,1), (1,1),)},
-                            fc_params = {'hidden_dim': (64,)}, drop_prob = 0, 
+    PLB = ConvNet(conv_params = {'kernel': ((1,16), (1,16), (1,16), (1,32)), 
+                                        'num_filter': (64, 128, 256, 512),
+                                        'stride': ((1,1), (1,1), (1,1),(1,1),),
+                                        'padding': ((0,0), (0,0), (0,0),(0,0),),
+                                        'dilate': ((1,1), (1,2), (1,2),(1,2),)},
+                            act_params = {'act_type': ('relu', 'relu', 'relu', 'relu','relu','relu')},
+                            pool_params = {'pool_type': ('max', 'max', 'max','max'),
+                                        'kernel': ((1,4), (1,4), (1,4),(1,4),),
+                                        'stride': ((1,4), (1,4), (1,4),(1,4),),
+                                        'padding': ((0,0),(0,0), (0,0), (0,0),),
+                                        'dilate': ((1,1), (1,1), (1,1),(1,1),)},
+                            fc_params = {'hidden_dim': (128,64)}, drop_prob = 0, 
     #                         input_dim = (2,1,8192)
                             input_dim = (1,1,8192)
                         )
 
-    Solver = Solver_nd(model = OURS_ori, 
+    Solver = Solver_nd(model = PLB, 
                     train = train_data,
                     test = test_data,
                     SNR = snr,   params = params_tl,
                     num_epoch=30, 
                     batch_size = 256
                     ,  lr_rate=0.0003
-                    ,save_checkpoints_address = './OURs/'
+                    ,save_checkpoints_address = './PLB/'
                     ,checkpoint_name = 'snr_%s' %int(snr*10),verbose =True, )
 
     try:

@@ -260,16 +260,16 @@ def shuffle_data_np(data, peak_samppoint, peak_time, times):
     return base
 # 
 def forward_moving_wave_nd(data, a):
-    return nd.concatenate([data[:,a:], nd.ones(shape=(data.shape[0], a), ctx=ctx) * data[0,-1]], axis = 1)
+    return nd.concatenate([data[:,a:], nd.ones(shape=(data.shape[0], a), ctx=mx.cpu()) * data[0,-1]], axis = 1)
 #
 def shuffle_data_nd(data, peak_samppoint, peak_time, times):
-    shift_list = nd.random_uniform(0, peak_samppoint - round((peak_time-0.2)*data.shape[-1]), shape=(10), ctx=ctx)
+    shift_list = nd.random_uniform(0, peak_samppoint - round((peak_time-0.2)*data.shape[-1]), shape=(10), ctx=mx.cpu())
     base = forward_moving_wave_nd(data, int(shift_list.asnumpy()[0]))
     
     for shift_size in shift_list[1:]:
         temp = forward_moving_wave_nd(data, int(shift_size.asnumpy()[0]))
         base = nd.concatenate([base, temp] , axis = 0)    
-    return base
+    return base.as_in_context(mx.gpu()), shift_list
 # 
 # 
 ##########################################################################################

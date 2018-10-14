@@ -51,10 +51,8 @@ test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 ## Training
 # params_tl  = None
 # for snr in list([1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
-
-# params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_8_best_params_epoch@16.pkl')
-# for snr in list([0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
-params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_5_best_params_epoch@9.pkl')
+# params_tl  = nd.load('/floyd/input/pretrained/PRL/snr_8_best_params_epoch@26.pkl')
+params_tl  = nd.load('/floyd/input/pretrained/PRL/snr_5_best_params_epoch@22.pkl')
 SNR_list = [0.4, 0.3, 0.2, 0.1]
 i = 0
 while True:
@@ -63,32 +61,31 @@ while True:
     except IndexError:
         break
 
-    OURS_ori = ConvNet(conv_params = {'kernel': ((1,16), (1,8), (1,8)), 
-                                        'num_filter': (16, 32, 64,),
-                                        'stride': ((1,1), (1,1), (1,1),),
-                                        'padding': ((0,0), (0,0), (0,0),),
-                                        'dilate': ((1,1), (1,1), (1,1),)},
-                            act_params = {'act_type': ('relu', 'relu', 'relu', 'relu',)},
-                            pool_params = {'pool_type': ('avg', 'avg', 'avg',),
-                                        'kernel': ((1,16), (1,16), (1,16),),
-                                        'stride': ((1,2), (1,2), (1,2),),
-                                        'padding': ((0,0),(0,0), (0,0),),
-                                        'dilate': ((1,1), (1,1), (1,1),)},
-                            fc_params = {'hidden_dim': (64,)}, drop_prob = 0, 
-    #                         input_dim = (2,1,8192)
-                            input_dim = (1,1,8192)
+    PRL = ConvNet(conv_params = {'kernel': ((1,64), (1,32), (1,32), (1,16),(1,16),(1,16)), 
+                                'num_filter': (8, 8, 16, 16, 32, 32),
+                                'stride': ((1,1), (1,1), (1,1),(1,1),(1,1),(1,1),),
+                                'padding': ((0,0), (0,0), (0,0),(0,0),(0,0),(0,0),),
+                                'dilate': ((1,1), (1,1), (1,1),(1,1),(1,1),(1,1),)},
+                    act_params = {'act_type': ('elu', 'elu', 'elu', 'elu','elu','elu','elu','elu')},
+                    pool_params = {'pool_type': ('max', 'max', 'max','max','max','max',),
+                                'kernel': ((1,1), (1,8), (1,1),(1,6),(1,1),(1,4)),
+                                'stride': ((1,2), (1,2), (1,2),(1,2),(1,2),(1,2)),
+                                'padding': ((0,0),(0,0), (0,0), (0,0),(0,0),(0,0)),
+                                'dilate': ((1,1), (1,1), (1,1),(1,1),(1,1),(1,1))},
+                    fc_params = {'hidden_dim': (64,64)}, drop_prob = 0.5, 
+#                         input_dim = (2,1,8192)
+                    input_dim = (1,1,8192)
                         )
 
-    Solver = Solver_nd(model = OURS_ori, 
+    Solver = Solver_nd(model = PRL, 
                     train = train_data,
                     test = test_data,
                     SNR = snr,   params = params_tl,
                     num_epoch=30, 
                     batch_size = 256
                     ,  lr_rate=0.0003
-                    ,save_checkpoints_address = './OURs/'
+                    ,save_checkpoints_address = './PRL/'
                     ,checkpoint_name = 'snr_%s' %int(snr*10),verbose =True, )
-
     try:
         Solver.Training()
     except mx.MXNetError:
