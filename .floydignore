@@ -16,6 +16,7 @@ var
 data/
 data_evaluate/
 data_SNRmf/
+data_SNR_def/
 detector_strain/
 Panyi_code/
 pretrained_models/

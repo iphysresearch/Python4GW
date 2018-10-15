@@ -54,8 +54,8 @@ test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
 # params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_8_best_params_epoch@16.pkl')
 # for snr in list([0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
-params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_5_best_params_epoch@9.pkl')
-SNR_list = [0.4, 0.3, 0.2, 0.1]
+params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_2_best_params_epoch@20.pkl')
+SNR_list = [0.1]
 i = 0
 while True:
     try:

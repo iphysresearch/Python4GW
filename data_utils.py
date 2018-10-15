@@ -313,7 +313,7 @@ def Normolise_nd(X, num_channel):
     data_norm = (X -mean)
     data_norm /= var
     return data_norm    
-#
+# 
 # 
 # 
 # 

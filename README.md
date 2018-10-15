@@ -37,11 +37,15 @@ floyd run --gpu --follow \
 
 floyd run --gpu \
 --data wctttty/datasets/gw_waveform/1:waveform \
---data wctttty/datasets/checkpoints_cnn_models/5:pretrained \
--m "PRL_987" \
+--data wctttty/datasets/checkpoints_cnn_models/15:pretrained \
+-m "PRL_21" \
 "bash setup_floydhub.sh && python run_PRL.py"
 
-
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/datasets/checkpoints_cnn_models/13:pretrained \
+-m "PRL_21" \
+"bash setup_floydhub.sh && python run.py"
 
 ---
 

@@ -53,9 +53,9 @@ params_tl  = None
 # for snr in list([1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
 # params_tl  = nd.load('/floyd/input/pretrained/PRL/snr_8_best_params_epoch@26.pkl')
 # params_tl  = nd.load('/floyd/input/pretrained/PRL/snr_5_best_params_epoch@22.pkl')
-params_tl  = nd.load('/floyd/input/pretrained/PRL/snr_10_best_params_epoch@29.pkl')
+params_tl  = nd.load('/floyd/input/pretrained/PRL/snr_3_best_params_epoch@27.pkl')
 
-SNR_list = [0.9,0.8,0.7]
+SNR_list = [0.2,0.1]
 i = 0
 while True:
     try:
