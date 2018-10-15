@@ -47,6 +47,12 @@ floyd run --gpu \
 -m "PRL_21" \
 "bash setup_floydhub.sh && python run.py"
 
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/datasets/checkpoints_cnn_models/11:pretrained \
+-m "PLB_1" \
+"bash setup_floydhub.sh && python run_PLB.py"
+
 ---
 
 floyd run --gpu \
@@ -67,3 +73,69 @@ floyd run --gpu \
 --data wctttty/datasets/checkpoints_cnn_models/15:pretrained \
 -m "AUC_PRL" \
 "bash setup_floydhub.sh && python run_eval_PRL.py"
+
+
+---
+
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/projects/python4gw/45:pretrained \
+-m "AUC_PRL21" \
+"bash setup_floydhub.sh && python run_eval_PRL.py"
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/projects/python4gw/46:pretrained \
+-m "AUC_OURs" \
+"bash setup_floydhub.sh && python run_eval.py"
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/datasets/checkpoints_cnn_models/11:pretrained \
+-m "AUC_PLB_1" \
+"bash setup_floydhub.sh && python run_eval_PLB.py"
+
+
+---
+
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+-m "OURs_ft_hidden_dim" \
+"bash setup_floydhub.sh && python run_ft_hidden_dim.py"
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+-m "OURs_ft_fc_params" \
+"bash setup_floydhub.sh && python run_ft_fc_params.py"
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+-m "OURs_ft_dropout" \
+"bash setup_floydhub.sh && python run_ft_dropout.py"
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+-m "OURs_ft_act_type" \
+"bash setup_floydhub.sh && python run_ft_act_type.py"
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+-m "OURs_ft_dialute" \
+"bash setup_floydhub.sh && python run_ft_dialute.py"
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+-m "OURs_ft_num_fiter" \
+"bash setup_floydhub.sh && python run_ft_num_filter.py"
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+-m "OURs_ft_pool_params" \
+"bash setup_floydhub.sh && python run_ft_pool_params.py"
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+-m "OURs_ft_conv_params" \
+"bash setup_floydhub.sh && python run_ft_conv_params.py"

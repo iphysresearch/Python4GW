@@ -3,6 +3,7 @@
 # DIY-begin
 data/
 data_evaluate/
+data_AUC/
 data_SNRmf/
 data_SNR_def/
 detector_strain/

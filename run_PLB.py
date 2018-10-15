@@ -51,8 +51,8 @@ test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 ## Training
 # params_tl  = None
 # for snr in list([1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
-params_tl  = nd.load('/floyd/input/pretrained/PLB/snr_8_best_params_epoch@2.pkl')
-SNR_list = [0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
+params_tl  = nd.load('/floyd/input/pretrained/PLB/snr_2_best_params_epoch@13.pkl')
+SNR_list = [0.1]
 i = 0
 while True:
     try:
