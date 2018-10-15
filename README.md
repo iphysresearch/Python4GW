@@ -28,32 +28,38 @@ floyd run --gpu --follow \
 -m "OURs_7" \
 "bash setup_floydhub.sh && python run.py"
 
-floyd run --gpu \
+floyd run --gpu --follow \
 --data wctttty/datasets/gw_waveform/1:waveform \
 --data wctttty/projects/python4gw/20:pretrained \
 -m "OURs_4" \
 "bash setup_floydhub.sh && python run.py"
 
 
-
-
-
 floyd run --gpu \
 --data wctttty/datasets/gw_waveform/1:waveform \
---data wctttty/projects/python4gw/19:pretrained \
--m "PRL_7" \
-"bash setup_floydhub.sh && python run_PRL.py"
-
-floyd run --gpu \
---data wctttty/datasets/gw_waveform/1:waveform \
---data wctttty/projects/python4gw/22:pretrained \
--m "PRL_4" \
+--data wctttty/datasets/checkpoints_cnn_models/5:pretrained \
+-m "PRL_987" \
 "bash setup_floydhub.sh && python run_PRL.py"
 
 
 
+---
+
 floyd run --gpu \
 --data wctttty/datasets/gw_waveform/1:waveform \
---data wctttty/projects/python4gw/16:pretrained \
--m "PLB_7" \
-"bash setup_floydhub.sh && python run_PLB.py"
+--data wctttty/datasets/checkpoints_cnn_models/13:pretrained \
+-m "AUC_OURs" \
+"bash setup_floydhub.sh && python run_eval.py"
+
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/datasets/checkpoints_cnn_models/11:pretrained \
+-m "AUC_PLB" \
+"bash setup_floydhub.sh && python run_eval_PLB.py"
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/datasets/checkpoints_cnn_models/15:pretrained \
+-m "AUC_PRL" \
+"bash setup_floydhub.sh && python run_eval_PRL.py"

@@ -2,6 +2,7 @@
 # https://www.cnblogs.com/kevingrace/p/5690241.html
 # DIY-begin
 data/
+data_evaluate/
 data_SNRmf/
 detector_strain/
 Panyi_code/

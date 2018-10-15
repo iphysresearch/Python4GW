@@ -269,7 +269,7 @@ def shuffle_data_nd(data, peak_samppoint, peak_time, times):
     for shift_size in shift_list[1:]:
         temp = forward_moving_wave_nd(data, int(shift_size.asnumpy()[0]))
         base = nd.concatenate([base, temp] , axis = 0)    
-    return base.as_in_context(mx.gpu()), shift_list
+    return base.as_in_context(ctx), shift_list
 # 
 # 
 ##########################################################################################

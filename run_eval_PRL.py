@@ -1,10 +1,7 @@
 #!usr/bin/python
 #coding=utf-8
 
-# importing the basic library
-from __future__ import print_function
 import sys, os
-
 sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地址之一
 
 from utils import *
@@ -15,11 +12,9 @@ from models.ConvNet import *
 import numpy as np
 import pandas as pd
 from itertools import product, permutations
+from sklearn import metrics
 
-import matplotlib.pyplot as plt
-print()
 test_ctx()
-print()
 
 
 ### Load Data ####
@@ -48,21 +43,21 @@ train_masses = [masses for masses in data.index if float(masses.split('|')[0]) %
 train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
-## Training
-params_tl  = None
-# for snr in list([1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
-# params_tl  = nd.load('/floyd/input/pretrained/PRL/snr_8_best_params_epoch@26.pkl')
-# params_tl  = nd.load('/floyd/input/pretrained/PRL/snr_5_best_params_epoch@22.pkl')
-params_tl  = nd.load('/floyd/input/pretrained/PRL/snr_10_best_params_epoch@29.pkl')
+MODEL = 'PRL'
+pretrained_add = '/floyd/input/pretrained/%s/' %MODEL
+os.system('ls -a %s | grep best > test.txt' %pretrained_add)
+params_adds = pd.read_csv('./test.txt', header=None)
+os.system('rm test.txt')
+params_adds['snr'] = params_adds[0].map(lambda x: int(x.split('_')[1]))
+params_adds = params_adds.sort_values('snr', ascending=False)[0].values.tolist()
 
-SNR_list = [0.9,0.8,0.7]
-i = 0
-while True:
-    try:
-        snr = SNR_list[i]
-    except IndexError:
-        break
+print(params_adds)
 
+auc_frame = []
+for param_add in params_adds:
+    print('Now working on  %s' %param_add)
+    param = nd.load(pretrained_add + param_add)
+    
     PRL = ConvNet(conv_params = {'kernel': ((1,64), (1,32), (1,32), (1,16),(1,16),(1,16)), 
                                 'num_filter': (8, 8, 16, 16, 32, 32),
                                 'stride': ((1,1), (1,1), (1,1),(1,1),(1,1),(1,1),),
@@ -75,24 +70,45 @@ while True:
                                 'padding': ((0,0),(0,0), (0,0), (0,0),(0,0),(0,0)),
                                 'dilate': ((1,1), (1,1), (1,1),(1,1),(1,1),(1,1))},
                     fc_params = {'hidden_dim': (64,64)}, drop_prob = 0.5, 
-#                         input_dim = (2,1,8192)
+                    params_inits = param,
                     input_dim = (1,1,8192)
-                        )
+                    )
 
-    Solver = Solver_nd(model = PRL, 
-                    train = train_data,
-                    test = test_data,
-                    SNR = snr,   params = params_tl,
-                    num_epoch=30, 
-                    batch_size = 256
-                    ,  lr_rate=0.0003
-                    ,save_checkpoints_address = './PRL/'
-                    ,checkpoint_name = 'snr_%s' %int(snr*10),verbose =True, )
-    try:
-        Solver.Training()
-    except mx.MXNetError:
-        print('Rerunning...')
-        continue
+    auc_list = []
+    snr_list = np.linspace(0.1, 1, 10)
+    j = 0
+    while True:
+        try:
+            snr = snr_list[j]
+        except IndexError:
+            break
 
-    params_tl = Solver.best_params
-    i += 1
+        try:
+            Solver = Solver_nd(model = PRL, 
+                            train = train_data,
+                            test = test_data,
+                            SNR = snr, 
+                            batch_size = 256)
+        except mx.MXNetError:
+            print('Rerunning...')
+            continue
+        auc_var_list = []
+        i = 0
+        while True:
+            if i == 10: break
+            else: pass
+            try:
+                prob, label , _= Solver.predict_nd()
+            except mx.MXNetError:
+                print('Rerunning...')
+                continue
+            fpr, tpr, thresholds = metrics.roc_curve(label, prob, pos_label=1)
+            auc = metrics.auc(fpr, tpr)
+            auc_var_list.append(auc)
+            print('{"metric": "AUC for SNR(model,test)=(%s,(0.1~10))", "value": %.5f}' %(param_add.split('_')[1], auc) )
+            i += 1
+        j += 1
+        
+        auc_list.append(auc_var_list)
+    auc_frame.append(auc_list)
+np.save('./AUC_%s' %MODEL, np.array(auc_frame))

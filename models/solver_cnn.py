@@ -281,6 +281,9 @@ class Solver_nd(object):
         else:
             self._random_data()
             self._reset_data()
+            print('SNR = %s' %self.SNR)
+            print('Label for training:', self.y_train.shape)
+            print('Label for testing:', self.y_test.shape)
 
 
 
@@ -333,11 +336,8 @@ class Solver_nd(object):
 
         self.param_noise = Pre_zero(size = (noiseAll_size,) + (self.train.shape[1:]))
 
-
         self.y_train = nd.concat(nd.ones(shape = (self.train_size,), ctx = ctx), nd.zeros(shape = (self.train_size,), ctx = ctx) , dim = 0)
         self.y_test = nd.concat(nd.ones(shape = (self.test_size,), ctx = ctx), nd.zeros(shape = (self.test_size,), ctx = ctx) , dim = 0)
-        print('Label for training:', self.y_train.shape)
-        print('Label for testing:', self.y_test.shape)
 
 
     def _reset_params_Transfer(self):
@@ -625,6 +625,8 @@ class Solver_nd(object):
     
     def predict_nd(self):
 
+        self._random_data()
+        
         if self.oldversion: pass
         else: self._reset_noise()
         
