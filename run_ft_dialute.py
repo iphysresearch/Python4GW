@@ -56,7 +56,7 @@ test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 # for snr in list([0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
 # params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_3_best_params_epoch@3.pkl')
 SNR_list = [1, 0.6, 0.4, 0.3, 0.2]
-dialute_list = [2, 3]
+dialute_list = [4, 5, 6]
 
 for dialute in dialute_list:
     print('dialute:' , dialute)

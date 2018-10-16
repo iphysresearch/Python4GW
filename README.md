@@ -139,3 +139,59 @@ floyd run --gpu \
 --data wctttty/datasets/gw_waveform/1:waveform \
 -m "OURs_ft_conv_params" \
 "bash setup_floydhub.sh && python run_ft_conv_params.py"
+
+
+
+---
+
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/projects/python4gw/68:pretrained \
+-m "AUC_OURs_ft_dropout" \
+"bash setup_floydhub.sh && python run_eval_ft_dropout.py"
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/projects/python4gw/70:pretrained \
+-m "AUC_OURs_ft_dialute" \
+"bash setup_floydhub.sh && python run_eval_ft_dialute.py"
+
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/projects/python4gw/71:pretrained \
+-m "AUC_OURs_ft_num_filter" \
+"bash setup_floydhub.sh && python run_eval_ft_num_filter.py"
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/projects/python4gw/69:pretrained \
+-m "AUC_OURs_ft_act_type" \
+"bash setup_floydhub.sh && python run_eval_ft_act_type.py"
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/projects/python4gw/66:pretrained \
+-m "AUC_OURs_ft_hidden_dim" \
+"bash setup_floydhub.sh && python run_eval_ft_hidden_dim.py"
+
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/projects/python4gw/72:pretrained \
+-m "AUC_OURs_ft_pool_param" \
+"bash setup_floydhub.sh && python run_eval_ft_pool_param.py"
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/projects/python4gw/67:pretrained \
+-m "AUC_OURs_ft_hidden_num" \
+"bash setup_floydhub.sh && python run_eval_ft_hidden_num.py"
+
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/projects/python4gw/73:pretrained \
+-m "AUC_OURs_ft_convlayer" \
+"bash setup_floydhub.sh && python run_eval_ft_convlayer.py"
