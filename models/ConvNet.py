@@ -3,6 +3,7 @@
 
 # importing the basic library
 from __future__ import print_function
+import numpy as np
 
 from layers import *
 from utils import *
@@ -48,6 +49,7 @@ class ConvNet(object):
         self.drop_prob = kwargs.pop('drop_prob', 0)
         
         self.dtype = kwargs.pop('dtype', None)
+        self.verbose = kwargs.pop('verbose', False)
 
         
         try: 
@@ -90,16 +92,19 @@ class ConvNet(object):
 
 
         # 模型参数 ##########################################################################################################
-        if params_inits:
-            self.params = params_inits.copy()
+        if params_inits:  # 目前用不上~
+            self.params = params_inits.copy() 
         else:
-            self.init_params()
+            self.init_params(debug = True)
+        # Debug ##########################################################################################################
+        if self.verbose:
+            self.network(X=nd.random_normal(shape = self.input_dim, ctx=ctx).reshape((1,)+self.input_dim), debug=True,)
             
         # 精度 ##########################################################################################################
         # for k, v in self.params.items():
         #     self.params[k] = v.astype(dtype)
 
-    def init_params(self, weight_scale = .01,):
+    def init_params(self, weight_scale = .01,debug = False):
         #######################
         #  Set the scale for weight initialization (random_normal)
         #######################
@@ -130,8 +135,14 @@ class ConvNet(object):
             H = (H - k_p[0] -(k_p[0]-1)*(D_p[0]-1) +2*P_p[0])//S_p[0] +1
             W = (W - k_p[1] -(k_p[0]-1)*(D_p[0]-1) +2*P_p[1])//S_p[1] +1
             i_out = i
+
+            if debug:
+                print('W{:d}'.format(i+1,), self.params['W{:d}'.format(i+1,)].shape, 
+                      'b{:d}'.format(i+1,), self.params['b{:d}'.format(i+1,)].shape)
         # MLP ##########################################################################################################
         self.flatten_dim = nf * H * W
+        if self.verbose:
+            print('Flatten: ', self.flatten_dim)
         hd_in = nf * H * W
         for j, hd in enumerate(hidden_dim):
 
@@ -139,13 +150,22 @@ class ConvNet(object):
             self.params['b{:d}'.format(j+i_out+2,)] = nd.random_normal(shape=hd, scale=weight_scale, ctx=ctx)
             hd_in = hd
             j_out = j
+            if debug:
+                print('W{:d}'.format(j+i_out+2,), self.params['W{:d}'.format(j+i_out+2,)].shape, 
+                      'b{:d}'.format(j+i_out+2,), self.params['b{:d}'.format(j+i_out+2,)].shape)                
 
         # OUTPUT ##########################################################################################################
         self.params['W{:d}'.format(j_out+i_out+3,)] = nd.random_normal(loc=0, scale=weight_scale, shape=(hd_in, self.output_dim), ctx=ctx )
         self.params['b{:d}'.format(j_out+i_out+3,)] = nd.random_normal(shape=self.output_dim, scale=weight_scale, ctx=ctx)       
-
+        if debug:
+            print('W{:d}'.format(j_out+i_out+3,), self.params['W{:d}'.format(j_out+i_out+3,)].shape, 
+                  'b{:d}'.format(j_out+i_out+3,), self.params['b{:d}'.format(j_out+i_out+3,)].shape)          
+            print('------------')
+            print("Weight dims: %e" %sum([ np.array(self.params['W{:d}'.format(i+1,)].shape).prod() for i in range(j_out+i_out+3)]))
+            print("Bias dims: %e" %sum([ np.array(self.params['b{:d}'.format(i+1,)].shape).prod() for i in range(j_out+i_out+3)]))
+            print('------------')
         return self.params
-
+##################
     def network(self, X=None, debug=False,):
                 
         filters, kernels, stride, padding, dilate = self.conv_params['num_filter'], self.conv_params['kernel'], \
@@ -198,6 +218,7 @@ class ConvNet(object):
 
         if debug:
             print("Output shape: {}".format(yhat.shape))
+            print('------------')
         interlayer.append(yhat)       
 
         return yhat, interlayer

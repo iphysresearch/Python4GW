@@ -18,6 +18,7 @@ data_evaluate/
 data_AUC/
 data_SNRmf/
 data_SNR_def/
+Note on Signal Processing for Gravitational-Wave Data Analysis/
 detector_strain/
 Panyi_code/
 pretrained_models/

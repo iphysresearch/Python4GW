@@ -254,8 +254,8 @@ class Solver_nd(object):
         self.oldversion = kwargs.pop('oldversion', False)
 #         self.print_every = kwargs.pop('print_every', 100)
         
-    
         self.params = kwargs.pop('params', None)   # Transfer learning
+        self.RandMLP = kwargs.pop('RandMLP', None)
         if self.params:  # 若有迁移学习
             self.params = self.params.copy()
             try:         # 考察导入的模型参数变量 与 导入模型的参数之间得到关系
@@ -352,7 +352,7 @@ class Solver_nd(object):
         self.loss_history = []
         self.loss_v_history = []
         self.moving_loss_history = []
-            
+
 #         self.optim_configs = {}
 #         for p in self.model.params:
 #             d = {k: v for k, v in self.optim_config.items()}
@@ -366,10 +366,15 @@ class Solver_nd(object):
         # Transfer Learning ########
         self.model.init_params()
         for key, params in self.params.items():
-            if params.shape[0] == self.model.flatten_dim:
+            if (params.shape[0] == self.model.flatten_dim) and (self.RandMLP):
                 break
             self.model.params[key] = params.copy()
-
+            
+        if self.RandMLP:
+            print('(Transfer Learning) Random the MLP part!')
+        else:
+            print('(Transfer Learning) NOT random the MLP part!')
+        print('------------')
         # And assign space for gradients
         for param in self.model.params.values():
             param.attach_grad()
@@ -398,12 +403,13 @@ class Solver_nd(object):
         # Opt. for Adam ############
         self.vs = []
         self.sqrs = []
-
+        
         # And assign space for gradients
         for param in self.model.params.values():
             param.attach_grad()
             self.vs.append(param.zeros_like())
             self.sqrs.append(param.zeros_like())
+        print('------------')
 
         
 

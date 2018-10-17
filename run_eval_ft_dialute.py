@@ -102,10 +102,11 @@ params_adds = params_adds.sort_values('dialute', ascending=False)[0].values.toli
 print(params_adds)
 
 auc_frame = []
-for param_add, hyperparam in zip(params_adds, Fine_tune('dialute', [3,2])):
+# for param_add, hyperparam in zip(params_adds, Fine_tune('dialute', [3,2])):
+for param_add, hyperparam in zip(params_adds, Fine_tune('dialute', [4,5,6])):    
 
     print('Now working on:')
-    test(Fine_tune('dialute', [3,2]))
+    test(Fine_tune('dialute', [4,5,6]))
     param = nd.load(pretrained_add + param_add)
 
     hidden_dim = hyperparam['hidden_dim']

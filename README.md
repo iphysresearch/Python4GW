@@ -204,3 +204,9 @@ floyd run --gpu \
 --data wctttty/datasets/gw_waveform/1:waveform \
 -m "OURs_modified" \
 "bash setup_floydhub.sh && python run_modified.py"
+
+floyd run --gpu \
+--data wctttty/datasets/gw_waveform/1:waveform \
+--data wctttty/projects/python4gw/83:pretrained \
+-m "AUC_OURs_ft_dialute" \
+"bash setup_floydhub.sh && python run_eval_ft_dialute.py"
