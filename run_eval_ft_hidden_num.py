@@ -165,3 +165,4 @@ for param_add, hyperparam in zip(params_adds, Fine_tune('fc_params_act_type', fc
     auc_frame.append(auc_list)
 os.system('rm -rf ./*')
 np.save('./AUC_%s' %MODEL, np.array(auc_frame))
+

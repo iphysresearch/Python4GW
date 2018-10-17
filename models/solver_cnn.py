@@ -321,8 +321,8 @@ class Solver_nd(object):
         self.test_shift_list.extend(test_shift_list.asnumpy().tolist())
         self.train = self.train.reshape(self.train_ori.shape[0]*10,self.num_channel,-1)
         self.test = self.test.reshape(self.test_ori.shape[0]*10,self.num_channel,-1)
-        
-        
+
+
     def _reset_data(self):
         
         try:
