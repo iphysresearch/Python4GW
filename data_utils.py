@@ -109,14 +109,14 @@ def oneSidedPeriodogram(y, fs, scipy = True):
     - xf[xf>=0]: Discrete Fourier Transform sample frequencies (one-sided)
     - oneSidedPeriodogram: one-sided PSD
     """
-    N = y.shape[1]
+    N = y.shape[0]
     if scipy: yf = fft(y)
     else: yf = np.fft.fft(y)
     
     if scipy: xf = fftfreq(N, 1./fs)
     else: xf = np.fft.fftfreq(N, 1./fs)
     
-    oneSidedPeriodogram = 2/fs*abs(yf[:,xf>=0])**2/N
+    oneSidedPeriodogram = 2/fs*abs(yf[xf>=0])**2/N
     return yf, xf[xf>=0], oneSidedPeriodogram
 # 
 # 

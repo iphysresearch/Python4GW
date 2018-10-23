@@ -10,12 +10,17 @@ import matplotlib.pyplot as plt
 
 from scipy import fft, ifft, real
 from scipy.signal import welch
+import urllib
+
+url  = 'https://dcc.ligo.org/public/0002/T0900288/003/ZERO_DET_high_P.txt'
+raw_data=urllib.request.urlopen(url)
+ZERO_DET = np.loadtxt(raw_data)
 
 def GenNoise_matlab(nDataSamples = 16384, fLow = 40, fHigh = 1024, fs = 4096, filtOrdr = 100, debug = None):
     # Generate simulated GW detector noise
     # File containing target sensitivity curve (first column is frequency and
     #  second column is square root of PSD).
-    targetSens = np.loadtxt('ZERO_DET_high_P.txt')
+    targetSens = ZERO_DET##np.loadtxt(raw_data)
 
     if debug:
         # Plot the target sensitivity.
@@ -184,11 +189,8 @@ def fftfilt(b, x, nfft=None):
             X = x[istart] * np.ones((nfft,1))  # need to fft a scalar
         else:
             X = fft(x[istart-1:iend,:].T, nfft).T
-#         print(X)
-#         print(B)
         Y = ifft((X * B).T).T
         yend = min(nx,istart+nfft-1)
-#         print(istart, yend)
         y[istart-1:yend,:] = y[istart-1:yend,:] + Y[:(yend-istart+1),:]
         istart += L
     y = real(y)
