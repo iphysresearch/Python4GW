@@ -4,6 +4,7 @@ function outputNoise = GetLigoNoise(file,fLow, fHigh, debug)
 % second column is square root of PSD).
 % file = 'iLIGOSensitivity.txt'   % 这是原文件
 targetSens = load(file);
+targetSens = load('ZERO_DET_high_P.txt')
 %%
 if debug
 % Plot the target sensitivity.
