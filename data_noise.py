@@ -4,8 +4,17 @@
 # importing the basic library
 from __future__ import print_function
 
+from utils import *
+ctx = check_ctx()
+# ctx = mx.gpu()
+
+# Data manipulation
+import mxnet.ndarray as nd
+import mxnet as mx
 import numpy as np
 import pandas as pd
+
+# PLOT
 import matplotlib.pyplot as plt
 
 from scipy import fft, ifft, real
@@ -364,8 +373,8 @@ def GenNoise_matlab_nd(shape, b):
     - outputNoise: mx.ndarray with the shape of 'shape'.
     """
     (numsamples, numsamplepoints) = shape
-    inputNoise = np.random.randn(numsamples, numsamplepoints)
-    outputNoise = fftfilt_nd(b.reshape((-1,1)),inputNoise.T).T
+    inputNoise = nd.random.randn(numsamples, numsamplepoints, ctx=ctx)
+    outputNoise = fftfilt_nd(b.reshape((-1,1)),inputNoise.T)
     return outputNoise
 
 def fftfilt_nd(b, x, nfft=None):
@@ -419,14 +428,16 @@ def fftfilt_nd(b, x, nfft=None):
     catch ME
         throwAsCaller(ME);
     end'''
-    B = fft(b.T, nfft).T
+    B = nd.contrib.fft(data = nd.concatenate([b.T, nd.zeros(shape=(1,(nfft-b.size)), ctx=ctx)], axis = 1))
     if b.size == 1:
         B = B.T     # make sure fft of B is a column (might be a row if b is scalar)
     if b.shape[1] == 1:
-        B = np.repeat(B, [x.shape[1],],axis=1)    # replicate the column B 
+        B = nd.repeat(data = B, repeats=x.shape[1], axis=0)    # replicate the column B
+        B_re = B[:,::2]
+        B_im = B[:,1::2]        
     if x.shape[1] == 1:
-        x = np.repeat(x, [b.shape[1],],axis=1)   # replicate the column x 
-    y = np.zeros_like(x)
+        x = nd.repeat(data = x, repeats=b.shape[1], axis=1)   # replicate the column x 
+    y = nd.zeros_like(x.T)
 
     istart = 1
     while istart <= nx:
@@ -434,13 +445,22 @@ def fftfilt_nd(b, x, nfft=None):
         if (iend - istart) == 0:
             X = x[istart] * np.ones((nfft,1))  # need to fft a scalar
         else:
-            X = fft(x[istart-1:iend,:].T, nfft).T
-        Y = ifft((X * B).T).T
+            temp = nd.slice(x , begin = istart-1, end=iend).T
+            X = nd.contrib.fft(data = nd.concatenate([temp, nd.zeros(shape=(temp.shape[0],(nfft-temp.shape[1])), ctx=ctx)], axis = 1))
+            X_re = X[:,::2]
+            X_im = X[:,1::2]            
+        
+        XprodB_re = (X_re*B_re - X_im*B_im)
+        XprodB_im = (X_re*B_im + X_im*B_re)
+        Ytemp = nd.zeros((X.shape[0], X.shape[1]) , ctx=ctx)
+        Ytemp[:,::2] = XprodB_re
+        Ytemp[:,1::2] = XprodB_im
+        Y = mx.contrib.ndarray.ifft(Ytemp/nfft)  # only the real part!!!!
+        
         yend = min(nx,istart+nfft-1)
-        y[istart-1:yend,:] = y[istart-1:yend,:] + Y[:(yend-istart+1),:]
-        istart += L
-    y = real(y)
-    if (m == 1) and (y.shape[1] == 1):
-        y = y.T    # turn column back into a row
-    return y
     
+        y[:,istart-1:yend] = y[:, istart-1:yend] + Y[:,:(yend-istart+1)]
+        istart += L
+#     y = real(y)
+
+    return y
