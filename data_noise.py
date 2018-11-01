@@ -308,7 +308,7 @@ def fir2(nn, ff, aa, **kwargs):
     a = 1           # Denominator. 
     return b
 
-def pre_fir(targetSens = 'ZERO_DET_high_P.txt', fLow=9, fHigh=9000, fs = 4096, filtOrdr = 1000):
+def pre_fir(targetSens = 'ZERO_DET_high_P.txt', fLow=9, fHigh=9000, fs = 8192, filtOrdr = 100):
     """
     Obtain filter coefficients for preparing to generate the colored noises. (ALL NUMPY)
     Input:

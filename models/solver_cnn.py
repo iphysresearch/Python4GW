@@ -339,7 +339,7 @@ class Solver_nd(object):
 #         self.param_noise = Pre_zero(size = (noiseAll_size,) + (self.train.shape[1:]))
         self.b = nd.array(pre_fir().reshape((-1,1)), ctx=ctx)
         self.pp = pre_fftfilt(self.b, shape = (self.noiseAll_size, self.train.shape[-1]), nfft=None)
-
+        
         self.y_train = nd.concat(nd.ones(shape = (self.train_size,), ctx = ctx), nd.zeros(shape = (self.train_size,), ctx = ctx) , dim = 0)
         self.y_test = nd.concat(nd.ones(shape = (self.test_size,), ctx = ctx), nd.zeros(shape = (self.test_size,), ctx = ctx) , dim = 0)
 
@@ -546,6 +546,7 @@ class Solver_nd(object):
         if ctx == mx.gpu():
             noise = GenNoise_matlab_nd(shape = (self.noiseAll_size, self.train.shape[-1]), params = self.pp)
             # print('Random noise!!')
+            nd.save('./noise',noise[:10])
         else:
             raise
             
@@ -573,7 +574,7 @@ class Solver_nd(object):
 
         # noise for pure conterpart
         noise = self.gen_noise().reshape(shape= (self.noiseAll_size,) + (self.train.shape[1:]))
-        nd.save('./noise',noise[:10]) 
+
         X_train = Normolise_nd(nd.concat(data_train, noise[:self.train_size], dim=0), self.num_channel)
 
         try: dataset_train = gluon.data.ArrayDataset(X_train, self.y_train)
