@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地
 
 from utils import *
 from data_utils import *
-from models.solver_cnn import *
+from models.solver_cnn_ import *
 from models.ConvNet import *
 
 import numpy as np
@@ -24,6 +24,7 @@ print()
 
 ### Load Data ####
 GW_address = '/floyd/input/waveform/'
+# GW_address = './data/'
 
 data = pd.DataFrame(np.load(GW_address+'GW_H1.npy'), index=np.load(GW_address+'GW_H1_index.npy'))
 print('Raw data: ', data.shape)
@@ -64,7 +65,7 @@ kernel_list = [((1,32), (1,32), (1,32),) ,
                ((1,32), (1,32), (1,32),),
                ((1,8), (1,8), (1,8),),
                ((1,4), (1,4), (1,4),) ]
-
+save_address = 'OURs_ft_pool_params'
 for index, (pool_type, kernel) in enumerate(zip(pool_type_list,kernel_list)):
     print('pool_type:' , pool_type)
     print('kernel:' , kernel)
@@ -96,11 +97,11 @@ for index, (pool_type, kernel) in enumerate(zip(pool_type_list,kernel_list)):
                         train = train_data,
                         test = test_data,
                         SNR = snr,   params = params_tl,
-                        num_epoch=30, 
-                        batch_size = 256
-                        ,  lr_rate=0.0003
-                        ,save_checkpoints_address = './OURs/'
-                        ,checkpoint_name = 'pool_params_%s' %int(index+1),verbose =True, )
+                        num_epoch=40, rand_times = 2,
+                        batch_size = 256, stacking_size = 256,
+                        lr_rate=0.0003
+                        ,save_checkpoints_address = './pretrained_models/%s/' %save_address
+                        ,checkpoint_name = 'pool_params_%s' %int(index+1),floydhub_verbose =True,)
 
         try:
             Solver.Training()
@@ -110,3 +111,8 @@ for index, (pool_type, kernel) in enumerate(zip(pool_type_list,kernel_list)):
 
         params_tl = Solver.best_params
         i += 1
+
+# floyd run --gpu \
+# --data wctttty/datasets/gw_waveform/1:waveform \
+# -m "OURs_ft_pool_params" \
+# "bash setup_floydhub.sh && python run_ft_pool_params.py"

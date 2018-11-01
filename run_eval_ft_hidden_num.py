@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地
 
 from utils import *
 from data_utils import *
-from models.solver_cnn import *
+from models.solver_cnn_ import *
 from models.ConvNet import *
 
 import numpy as np
@@ -57,7 +57,8 @@ def test(diedai):
 
 
 ### Load Data ####
-GW_address = '/floyd/input/waveform/'
+# GW_address = '/floyd/input/waveform/'
+GW_address = './data/'
 
 data = pd.DataFrame(np.load(GW_address+'GW_H1.npy'), index=np.load(GW_address+'GW_H1_index.npy'))
 print('Raw data: ', data.shape)
@@ -82,9 +83,10 @@ train_masses = [masses for masses in data.index if float(masses.split('|')[0]) %
 train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
-MODEL = 'OURs'
-pretrained_add = '/floyd/input/pretrained/%s/' %MODEL
-os.system('ls -a %s | grep best > test.txt' %pretrained_add)
+MODEL = 'fc_params'
+# pretrained_add = '/floyd/input/pretrained/%s/' %MODEL
+pretrained_add = './pretrained_models/OURs_finetune/'
+os.system('ls -a %s | grep best | grep %s > test.txt' %(pretrained_add, MODEL))
 params_adds = pd.read_csv('./test.txt', header=None)
 os.system('rm test.txt')
 params_adds['drop_prob'] = params_adds[0].map(lambda x: int(x.split('_')[2]))
@@ -146,7 +148,7 @@ for param_add, hyperparam in zip(params_adds, Fine_tune('fc_params_act_type', fc
         auc_var_list = []
         i = 0
         while True:
-            if i == 10: break
+            if i == 4: break
             else: pass
             try:
                 prob, label , _= Solver.predict_nd()
@@ -163,6 +165,6 @@ for param_add, hyperparam in zip(params_adds, Fine_tune('fc_params_act_type', fc
         
         auc_list.append(auc_var_list)
     auc_frame.append(auc_list)
-os.system('rm -rf ./*')
-np.save('./AUC_%s' %MODEL, np.array(auc_frame))
+# os.system('rm -rf ./*')
+np.save('./AUC_data/AUC_%s' %MODEL, np.array(auc_frame))
 

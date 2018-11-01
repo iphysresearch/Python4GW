@@ -47,8 +47,8 @@ train_masses = [masses for masses in data.index if float(masses.split('|')[0]) %
 train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
-MODEL = 'OURs'
-pretrained_add = '/floyd/input/pretrained/%s/' %MODEL
+MODEL = 'OURs_ft_conv_params'
+pretrained_add = '/floyd/input/pretrained/pretrained_models/%s/' %MODEL
 os.system('ls -a %s | grep best > test.txt' %pretrained_add)
 params_adds = pd.read_csv('./test.txt', header=None)
 os.system('rm test.txt')
@@ -104,7 +104,7 @@ for param_add, num_layers in zip(params_adds, num_layers_list):
         auc_var_list = []
         i = 0
         while True:
-            if i == 10: break
+            if i == 4: break
             else: pass
             try:
                 prob, label , _= Solver.predict_nd()
@@ -123,3 +123,9 @@ for param_add, num_layers in zip(params_adds, num_layers_list):
     auc_frame.append(auc_list)
 os.system('rm -rf ./*')
 np.save('./AUC_%s' %MODEL, np.array(auc_frame))
+
+# floyd run --gpu \
+# --data wctttty/datasets/gw_waveform/1:waveform \
+# --data wctttty/projects/python4gw/121:pretrained \
+# -m "AUC_ft_convlayer" \
+# "bash setup_floydhub.sh && python run_eval_ft_convlayer.py"

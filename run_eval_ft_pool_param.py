@@ -81,8 +81,8 @@ train_masses = [masses for masses in data.index if float(masses.split('|')[0]) %
 train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
-MODEL = 'OURs'
-pretrained_add = '/floyd/input/pretrained/%s/' %MODEL
+MODEL = 'OURs_ft_pool_params'
+pretrained_add = '/floyd/input/pretrained/pretrained_models/%s/' %MODEL
 os.system('ls -a %s | grep best > test.txt' %pretrained_add)
 params_adds = pd.read_csv('./test.txt', header=None)
 os.system('rm test.txt')
@@ -147,7 +147,7 @@ for param_add, hyperparam in zip(params_adds, Fine_tune('pool_type_kernel', [i f
         auc_var_list = []
         i = 0
         while True:
-            if i == 10: break
+            if i == 4: break
             else: pass
             try:
                 prob, label , _= Solver.predict_nd()
@@ -167,3 +167,9 @@ for param_add, hyperparam in zip(params_adds, Fine_tune('pool_type_kernel', [i f
 os.system('rm -rf ./*')
 np.save('./AUC_%s' %MODEL, np.array(auc_frame))
 test(Fine_tune('pool_type_kernel', [i for i in zip(pool_type_tuple, values)]))
+
+# floyd run --gpu \
+# --data wctttty/datasets/gw_waveform/1:waveform \
+# --data wctttty/projects/python4gw/123:pretrained \
+# -m "AUC_ft_pool_param" \
+# "bash setup_floydhub.sh && python run_eval_ft_pool_param.py"

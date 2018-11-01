@@ -1,15 +1,17 @@
 #!usr/bin/python
 #coding=utf-8
 
+
 # importing the basic library
 from __future__ import print_function
-import sys, os
+import sys, os, getopt
 
 sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地址之一
 
 from utils import *
 from data_utils import *
-from models.solver_cnn import *
+# from models.solver_cnn import *
+from models.solver_cnn_ import *
 from models.ConvNet import *
 
 import numpy as np
@@ -21,9 +23,18 @@ print()
 test_ctx()
 print()
 
+def usage():
+    print('''
+    python run.py -h  打开这个帮助文档；
+    python run.py -o  OURs 
+    python run.py -b  PLB
+    python run.py -l  PRL    
+    python run.py -m  OURs_modified
+    ''')
 
 ### Load Data ####
-GW_address = '/floyd/input/waveform/'
+# GW_address = '/floyd/input/waveform/'
+GW_address = './data/'
 
 data = pd.DataFrame(np.load(GW_address+'GW_H1.npy'), index=np.load(GW_address+'GW_H1_index.npy'))
 print('Raw data: ', data.shape)
@@ -48,14 +59,94 @@ train_masses = [masses for masses in data.index if float(masses.split('|')[0]) %
 train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
+opts, args = getopt.getopt(sys.argv[1:], "hoblm")
+for op, value in opts:
+    if op == "-o":
+        print('Using model "OURs"!')
+        save_address = 'OURs'
+        model = ConvNet(conv_params = {'kernel': ((1,16), (1,8), (1,8)), 
+                                    'num_filter': (16, 32, 64,),
+                                    'stride': ((1,1), (1,1), (1,1),),
+                                    'padding': ((0,0), (0,0), (0,0),),
+                                    'dilate': ((1,1), (1,1), (1,1),)},
+                        act_params = {'act_type': ('relu', 'relu', 'relu', 'relu',)},
+                        pool_params = {'pool_type': ('avg', 'avg', 'avg',),
+                                    'kernel': ((1,16), (1,16), (1,16),),
+                                    'stride': ((1,2), (1,2), (1,2),),
+                                    'padding': ((0,0),(0,0), (0,0),),
+                                    'dilate': ((1,1), (1,1), (1,1),)},
+                        fc_params = {'hidden_dim': (64,)}, drop_prob = 0, 
+#                         input_dim = (2,1,8192)
+                        input_dim = (1,1,8192)
+                    )
+    elif op == "-b":
+        print('Using model "PLB"!')
+        save_address = 'PLB'
+        model = ConvNet(conv_params = {'kernel': ((1,16), (1,16), (1,16), (1,32)), 
+                                            'num_filter': (64, 128, 256, 512),
+                                            'stride': ((1,1), (1,1), (1,1),(1,1),),
+                                            'padding': ((0,0), (0,0), (0,0),(0,0),),
+                                            'dilate': ((1,1), (1,2), (1,2),(1,2),)},
+                                act_params = {'act_type': ('relu', 'relu', 'relu', 'relu','relu','relu')},
+                                pool_params = {'pool_type': ('max', 'max', 'max','max'),
+                                            'kernel': ((1,4), (1,4), (1,4),(1,4),),
+                                            'stride': ((1,4), (1,4), (1,4),(1,4),),
+                                            'padding': ((0,0),(0,0), (0,0), (0,0),),
+                                            'dilate': ((1,1), (1,1), (1,1),(1,1),)},
+                                fc_params = {'hidden_dim': (128,64)}, drop_prob = 0, 
+        #                         input_dim = (2,1,8192)
+                                input_dim = (1,1,8192)
+                            )
+    elif op == "-l":
+        print('Using model "PRL"!')
+        save_address = 'PRL'
+        model = ConvNet(conv_params = {'kernel': ((1,64), (1,32), (1,32), (1,16),(1,16),(1,16)), 
+                                    'num_filter': (8, 8, 16, 16, 32, 32),
+                                    'stride': ((1,1), (1,1), (1,1),(1,1),(1,1),(1,1),),
+                                    'padding': ((0,0), (0,0), (0,0),(0,0),(0,0),(0,0),),
+                                    'dilate': ((1,1), (1,1), (1,1),(1,1),(1,1),(1,1),)},
+                        act_params = {'act_type': ('elu', 'elu', 'elu', 'elu','elu','elu','elu','elu')},
+                        pool_params = {'pool_type': ('max', 'max', 'max','max','max','max',),
+                                    'kernel': ((1,1), (1,8), (1,1),(1,6),(1,1),(1,4)),
+                                    'stride': ((1,2), (1,2), (1,2),(1,2),(1,2),(1,2)),
+                                    'padding': ((0,0),(0,0), (0,0), (0,0),(0,0),(0,0)),
+                                    'dilate': ((1,1), (1,1), (1,1),(1,1),(1,1),(1,1))},
+                        fc_params = {'hidden_dim': (64,64)}, drop_prob = 0.5, 
+    #                         input_dim = (2,1,8192)
+                        input_dim = (1,1,8192)
+                            )
+    elif op == "-m":
+        print('Using model "OURs_modified"!')
+        save_address = 'OURs_modified'
+        model = ConvNet(conv_params = {'kernel': ((1,16), (1,8), (1,8)), 
+                                    'num_filter': (32, 64, 128,),
+                                    'stride': ((1,1), (1,1), (1,1),),
+                                    'padding': ((0,0), (0,0), (0,0),),
+                                    'dilate': ((1,1), (1,1), (1,1),)},
+                        act_params = {'act_type': ('elu', 'elu', 'elu', 'elu',)},
+                        pool_params = {'pool_type': ('max', 'max', 'max',),
+                                    'kernel': ((1,4), (1,4), (1,4),),
+                                    'stride': ((1,2), (1,2), (1,2),),
+                                    'padding': ((0,0),(0,0), (0,0),),
+                                    'dilate': ((1,1), (1,1), (1,1),)},
+                        fc_params = {'hidden_dim': (256,)}, drop_prob = 0, 
+#                         input_dim = (2,1,8192)
+                        input_dim = (1,1,8192)
+                            )
+    elif op == "-h":
+        usage()
+        sys.exit()
+
 ## Training
-# params_tl  = None
+params_tl  = None
+# params_tl = nd.load('./pretrained_models/snr_10_best_params_epoch@28.pkl')
 # for snr in list([1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
 
 # params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_8_best_params_epoch@16.pkl')
 # for snr in list([0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
-params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_2_best_params_epoch@20.pkl')
-SNR_list = [0.1]
+# params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_2_best_params_epoch@20.pkl')
+SNR_list = [1, 1, 0.9, 0.9, 0.8, 0.8, 0.7, 0.7, 0.6, 0.6, 0.5, 0.5, 0.4, 0.4,0.3, 0.3,0.2, 0.2,0.1,0.1]
+# SNR_list = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2,0.1]
 i = 0
 while True:
     try:
@@ -63,37 +154,28 @@ while True:
     except IndexError:
         break
 
-    OURS_ori = ConvNet(conv_params = {'kernel': ((1,16), (1,8), (1,8)), 
-                                        'num_filter': (16, 32, 64,),
-                                        'stride': ((1,1), (1,1), (1,1),),
-                                        'padding': ((0,0), (0,0), (0,0),),
-                                        'dilate': ((1,1), (1,1), (1,1),)},
-                            act_params = {'act_type': ('relu', 'relu', 'relu', 'relu',)},
-                            pool_params = {'pool_type': ('avg', 'avg', 'avg',),
-                                        'kernel': ((1,16), (1,16), (1,16),),
-                                        'stride': ((1,2), (1,2), (1,2),),
-                                        'padding': ((0,0),(0,0), (0,0),),
-                                        'dilate': ((1,1), (1,1), (1,1),)},
-                            fc_params = {'hidden_dim': (64,)}, drop_prob = 0, 
-    #                         input_dim = (2,1,8192)
-                            input_dim = (1,1,8192)
-                        )
-
-    Solver = Solver_nd(model = OURS_ori, 
-                    train = train_data,
-                    test = test_data,
+    Solver = Solver_nd(model = model, 
+                    train = train_data,#[:100,:],
+                    test = test_data,#[:100,:],
                     SNR = snr,   params = params_tl,
-                    num_epoch=30, 
-                    batch_size = 256
-                    ,  lr_rate=0.0003
-                    ,save_checkpoints_address = './OURs/'
-                    ,checkpoint_name = 'snr_%s' %int(snr*10),verbose =True, )
+                    num_epoch=30, rand_times = 2,
+                    batch_size = 256//2, stacking_size = 256//2,
+                    lr_rate=0.0003
+                    ,save_checkpoints_address = './pretrained_models/%s/' %save_address
+                    ,checkpoint_name = 'snr_%s' %int(snr*10), floydhub_verbose =False, )
 
     try:
         Solver.Training()
-    except mx.MXNetError:
+    except mx.MXNetError as e:
+        print(e)
         print('Rerunning...')
         continue
 
     params_tl = Solver.best_params
     i += 1
+
+
+# floyd run --gpu \
+# --data wctttty/datasets/gw_waveform/1:waveform \
+# -m "OURs_modified" \
+# "bash setup_floydhub.sh && python run.py -m"

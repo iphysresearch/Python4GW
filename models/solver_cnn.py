@@ -9,6 +9,7 @@ import sys
 from models.ConvNet import * 
 from layers import *
 from data_utils import *
+from data_noise import *
 from utils import *
 ctx = check_ctx()
 
@@ -239,8 +240,8 @@ class Solver_nd(object):
         
         self.SNR = SNR
 
-#         self.update_rule = kwargs.pop('update_rule', 'sgd')
-#         self.optim_config = kwargs.pop('optim_config', {})
+     #     self.update_rule = kwargs.pop('update_rule', 'sgd')
+     #     self.optim_config = kwargs.pop('optim_config', {})
 
         self.batch_size = kwargs.pop('batch_size', 256)
         self.lr_rate = kwargs.pop('lr_rate', 0.01)
@@ -250,9 +251,9 @@ class Solver_nd(object):
         
         self.save_checkpoints_address = kwargs.pop('save_checkpoints_address', './checkpoints/')
         self.checkpoint_name = kwargs.pop('checkpoint_name', None)
-        self.verbose = kwargs.pop('verbose', False)
+        self.verbose = kwargs.pop('floydhub_verbose', False)
         self.oldversion = kwargs.pop('oldversion', False)
-#         self.print_every = kwargs.pop('print_every', 100)
+    #   self.print_every = kwargs.pop('print_every', 100)
         
         self.params = kwargs.pop('params', None)   # Transfer learning
         self.RandMLP = kwargs.pop('RandMLP', None)
@@ -314,13 +315,14 @@ class Solver_nd(object):
 
     def _random_data(self):
         
-        self.train, train_shift_list = shuffle_data_nd(self.train_ori,self.peak_samppoint, self.peak_time, 10)
-        self.test, test_shift_list = shuffle_data_nd(self.test_ori,self.peak_samppoint, self.peak_time, 10)
+        # print('Random data!!')
+        self.train, train_shift_list = shuffle_data_nd(self.train_ori,self.peak_samppoint, self.peak_time, 2)
+        self.test, test_shift_list = shuffle_data_nd(self.test_ori,self.peak_samppoint, self.peak_time, 2)
 
         self.train_shift_list.extend(train_shift_list.asnumpy().tolist())
         self.test_shift_list.extend(test_shift_list.asnumpy().tolist())
-        self.train = self.train.reshape(self.train_ori.shape[0]*10,self.num_channel,-1)
-        self.test = self.test.reshape(self.test_ori.shape[0]*10,self.num_channel,-1)
+        self.train = self.train.reshape(self.train_ori.shape[0]*2,self.num_channel,-1).as_in_context(ctx)
+        self.test = self.test.reshape(self.test_ori.shape[0]*2,self.num_channel,-1).as_in_context(ctx)
 
 
     def _reset_data(self):
@@ -332,9 +334,11 @@ class Solver_nd(object):
         
         self.train_size = self.train.shape[0]
         self.test_size = self.test.shape[0]
-        noiseAll_size = self.train_size+self.test_size
+        self.noiseAll_size = self.train_size+self.test_size
 
-        self.param_noise = Pre_zero(size = (noiseAll_size,) + (self.train.shape[1:]))
+#         self.param_noise = Pre_zero(size = (noiseAll_size,) + (self.train.shape[1:]))
+        self.b = nd.array(pre_fir().reshape((-1,1)), ctx=ctx)
+        self.pp = pre_fftfilt(self.b, shape = (self.noiseAll_size, self.train.shape[-1]), nfft=None)
 
         self.y_train = nd.concat(nd.ones(shape = (self.train_size,), ctx = ctx), nd.zeros(shape = (self.train_size,), ctx = ctx) , dim = 0)
         self.y_test = nd.concat(nd.ones(shape = (self.test_size,), ctx = ctx), nd.zeros(shape = (self.test_size,), ctx = ctx) , dim = 0)
@@ -534,37 +538,44 @@ class Solver_nd(object):
 
     def gen_noise(self):
         
+#         if ctx == mx.gpu():
+#             noise, _ = TimeseriesFromPSD_nd(self.param_noise)
+#         elif ctx == mx.cpu():
+#             noise, _ = TimeseriesFromPSD(self.param_noise)
+#             noise = nd.array(noise)
         if ctx == mx.gpu():
-            noise, _ = TimeseriesFromPSD_nd(self.param_noise)
-        elif ctx == mx.cpu():
-            noise, _ = TimeseriesFromPSD(self.param_noise)
-            noise = nd.array(noise)
+            noise = GenNoise_matlab_nd(shape = (self.noiseAll_size, self.train.shape[-1]), params = self.pp)
+            # print('Random noise!!')
+        else:
+            raise
+            
             
         return noise
 
     
 
     def _reset_noise(self):
-        
+
         # noise for mixing
-        noise = self.gen_noise()
+        noise = self.gen_noise().reshape(shape= (self.noiseAll_size,) + (self.train.shape[1:]))
 
         try: sigma = self.train.max(axis = 2) / float(self.SNR) / nd.array(noise[:self.train_size].asnumpy().std(axis = 2,dtype='float64'),ctx=ctx)
         except: sigma = self.train.max(axis = -1) / float(self.SNR) / nd.array(noise[:self.train_size].asnumpy().std(axis = -1,dtype='float64'),ctx=ctx)            
         self.sigma = sigma
         signal_train = nd.divide(self.train, sigma.reshape((self.train_size,self.num_channel,-1)))
         data_train = signal_train + noise[:self.train_size]
-        
+
         try: sigma = self.test.max(axis = 2) / float(self.SNR) / nd.array(noise[-self.test_size:].asnumpy().std(axis = 2,dtype='float64'),ctx=ctx)
         except: sigma = self.test.max(axis = -1) / float(self.SNR) / nd.array(noise[-self.test_size:].asnumpy().std(axis = -1,dtype='float64'),ctx=ctx)
-        signal_test = nd.divide(self.test, sigma.reshape((self.test_size,self.num_channel,-1)))    
+        signal_test = nd.divide(self.test, sigma.reshape((self.test_size,self.num_channel,-1)))
         data_test = signal_test + noise[-self.test_size:]
         
 
         # noise for pure conterpart
-        noise = self.gen_noise()
-        
+        noise = self.gen_noise().reshape(shape= (self.noiseAll_size,) + (self.train.shape[1:]))
+        nd.save('./noise',noise[:10]) 
         X_train = Normolise_nd(nd.concat(data_train, noise[:self.train_size], dim=0), self.num_channel)
+
         try: dataset_train = gluon.data.ArrayDataset(X_train, self.y_train)
         except: dataset_train = gluon.data.ArrayDataset(X_train, self.y_train)
         self.train_data = gluon.data.DataLoader(dataset_train, self.batch_size, shuffle=True, last_batch='keep')
@@ -573,9 +584,8 @@ class Solver_nd(object):
         try: dataset_test = gluon.data.ArrayDataset(X_test, self.y_test)
         except: dataset_test = gluon.data.ArrayDataset(X_test, self.y_test)
         self.test_data = gluon.data.DataLoader(dataset_test, self.batch_size, shuffle=True, last_batch='keep')
-        
-
     
+
     def check_acc(self, data_iterator):
         numerator = 0.
         denominator = 0.
@@ -621,10 +631,10 @@ class Solver_nd(object):
         # save the best params
         if self.findabest:
             os.system('rm -rf '+file_address+'%s_best_params_epoch@*' %self.checkpoint_name)
-            nd.save(file_address+'%s_best_params_epoch@%s.pkl' %(self.checkpoint_name, self.best_params_epoch) , self.best_params)
+            nd.save(file_address+'%s_best_params_epoch@%s_%s.pkl' %(self.checkpoint_name, self.best_params_epoch, self.best_test_acc) , self.best_params)
             self.findabest = 0
         # save all the parsms during the training
-        nd.save(file_address+'%s_params_epoch@%s.pkl' %(self.checkpoint_name, self.epoch), self.model.params)
+        # nd.save(file_address+'%s_params_epoch@%s.pkl' %(self.checkpoint_name, self.epoch), self.model.params)
         # save the processing info. within the training
         nd.save(file_address+'%s_info.pkl' %(self.checkpoint_name), checkpoint)
     
@@ -644,6 +654,14 @@ class Solver_nd(object):
             label = label.as_in_context(ctx)
             label = nd.one_hot(label, self.model.output_dim).asnumpy()[:,1].tolist()
             output, _ = self.model.network(X=data)
+            print(label, output)
+            # print(data)
+            nd.save('./output', data)
+            
+            # import matplotlib.pyplot as plt
+            # plt.plot(data.asnumpy()[0][0][0].tolist())
+            # plt.show()
+            break
             prob = transform_softmax(output)[:,1].asnumpy().tolist()
             prob_list.extend(prob)
             label_list.extend(label)

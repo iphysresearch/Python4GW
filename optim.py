@@ -26,7 +26,7 @@ def test_ctx():
     
 def lr_decay(lr, epoch, lr_decay):
     # 学习率自我衰减。
-    if epoch > 2:
+    if epoch > 4:
 #         lr *= 0.1
         lr /= (1+lr_decay * epoch)
     return lr

@@ -260,16 +260,18 @@ def shuffle_data_np(data, peak_samppoint, peak_time, times):
     return base
 # 
 def forward_moving_wave_nd(data, a):
-    return nd.concatenate([data[:,a:], nd.ones(shape=(data.shape[0], a), ctx=mx.cpu()) * data[0,-1]], axis = 1)
-#
+    former_data = nd.slice_axis(data, axis=1, begin=a,end=-1)
+    return nd.concatenate([former_data, nd.ones(shape=(data.shape[0], data.shape[1]-former_data.shape[1]), ctx=mx.cpu()) * data[0,-1]], axis = 1)
 def shuffle_data_nd(data, peak_samppoint, peak_time, times):
-    shift_list = nd.random_uniform(0, peak_samppoint - round((peak_time-0.2)*data.shape[-1]), shape=(10), ctx=mx.cpu())
+    shift_list = nd.random_uniform(0, peak_samppoint - round((peak_time-0.2)*data.shape[-1]), shape=(times), ctx=mx.cpu())
     base = forward_moving_wave_nd(data, int(shift_list.asnumpy()[0]))
-    
-    for shift_size in shift_list[1:]:
-        temp = forward_moving_wave_nd(data, int(shift_size.asnumpy()[0]))
-        base = nd.concatenate([base, temp] , axis = 0)    
-    return base.as_in_context(ctx), shift_list
+    if times == 1:
+        return base, shift_list
+    else:
+        for shift_size in shift_list[1:]:
+            temp = forward_moving_wave_nd(data, int(shift_size.asnumpy()[0]))
+            base = nd.concatenate([base, temp] , axis = 0)    
+        return base, shift_list
 # 
 # 
 ##########################################################################################
@@ -308,11 +310,10 @@ def Normolise_nd(X, num_channel):
     - DataFrame.
     """
     mean = X.mean(axis=2).reshape((-1,num_channel,1))
-    var = nd.sqrt(((X - mean) ** 2).mean(axis=2)).reshape((-1,num_channel,1))
-
-    data_norm = (X -mean)
+    var = nd.sqrt(((X - mean).astype('float64') ** 2).mean(axis=2)).reshape((-1,num_channel,1))
+    data_norm = (X -mean).astype('float64')
     data_norm /= var
-    return data_norm    
+    return data_norm.astype('float32')
 # 
 # 
 # 

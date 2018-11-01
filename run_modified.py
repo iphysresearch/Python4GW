@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地
 
 from utils import *
 from data_utils import *
-from models.solver_cnn import *
+from models.solver_cnn_ import *
 from models.ConvNet import *
 
 import numpy as np

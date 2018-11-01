@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地
 
 from utils import *
 from data_utils import *
-from models.solver_cnn import *
+from models.solver_cnn_ import *
 from models.ConvNet import *
 
 import numpy as np
@@ -23,7 +23,8 @@ print()
 
 
 ### Load Data ####
-GW_address = '/floyd/input/waveform/'
+# GW_address = '/floyd/input/waveform/'
+GW_address = './data/'
 
 data = pd.DataFrame(np.load(GW_address+'GW_H1.npy'), index=np.load(GW_address+'GW_H1_index.npy'))
 print('Raw data: ', data.shape)
@@ -55,9 +56,9 @@ test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 # params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_8_best_params_epoch@16.pkl')
 # for snr in list([0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
 # params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_3_best_params_epoch@3.pkl')
-SNR_list = [1, 0.6, 0.4, 0.3, 0.2]
+SNR_list = [1, 0.6, 0.4, 0.3, 0.2, 0.1]
 act_type_list = ['elu']
-
+save_address = 'OURs_finetune'
 for act_type in act_type_list:
     print('act_type:' , act_type)
     i = 0
@@ -88,11 +89,11 @@ for act_type in act_type_list:
                         train = train_data,
                         test = test_data,
                         SNR = snr,   params = params_tl,
-                        num_epoch=30, 
-                        batch_size = 256
-                        ,  lr_rate=0.0003
-                        ,save_checkpoints_address = './OURs/'
-                        ,checkpoint_name = 'act_type_%s' %act_type,verbose =True, )
+                        num_epoch=40, rand_times = 2,
+                        batch_size = 256, stacking_size = 512,
+                        lr_rate=0.0003,
+                        save_checkpoints_address = './pretrained_models/%s/' %save_address
+                        ,checkpoint_name = 'act_type_%s' %act_type,floydhub_verbose =False, )
 
         try:
             Solver.Training()

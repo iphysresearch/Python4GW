@@ -19,6 +19,7 @@ test_ctx()
 
 ### Load Data ####
 GW_address = '/floyd/input/waveform/'
+# GW_address = './data/'
 
 data = pd.DataFrame(np.load(GW_address+'GW_H1.npy'), index=np.load(GW_address+'GW_H1_index.npy'))
 print('Raw data: ', data.shape)
@@ -44,7 +45,7 @@ train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
 MODEL = 'PLB'
-pretrained_add = '/floyd/input/pretrained/%s/' %MODEL
+pretrained_add = '/floyd/input/pretrained/pretrained_models/%s/' %MODEL
 os.system('ls -a %s | grep best > test.txt' %pretrained_add)
 params_adds = pd.read_csv('./test.txt', header=None)
 os.system('rm test.txt')
@@ -80,6 +81,7 @@ for param_add in params_adds:
     while True:
         try:
             snr = snr_list[j]
+            print('Testing for snr=', snr)
         except IndexError:
             break
         
@@ -96,7 +98,7 @@ for param_add in params_adds:
         auc_var_list = []
         i = 0
         while True:
-            if i == 10: break
+            if i == 4: break
             else: pass
             try:
                 prob, label , _= Solver.predict_nd()
@@ -114,3 +116,10 @@ for param_add in params_adds:
         auc_list.append(auc_var_list)
     auc_frame.append(auc_list)
 np.save('./AUC_%s' %MODEL, np.array(auc_frame))
+
+
+# floyd run --gpu \
+# --data wctttty/datasets/gw_waveform/1:waveform \
+# --data wctttty/projects/python4gw/114:pretrained \
+# -m "AUC_PLB2" \
+# "bash setup_floydhub.sh && python run_eval_PLB.py"

@@ -24,6 +24,7 @@ print()
 
 ### Load Data ####
 GW_address = '/floyd/input/waveform/'
+# GW_address = './data/'
 
 data = pd.DataFrame(np.load(GW_address+'GW_H1.npy'), index=np.load(GW_address+'GW_H1_index.npy'))
 print('Raw data: ', data.shape)
@@ -53,9 +54,9 @@ params_tl  = None
 # for snr in list([1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
 # params_tl  = nd.load('/floyd/input/pretrained/PRL/snr_8_best_params_epoch@26.pkl')
 # params_tl  = nd.load('/floyd/input/pretrained/PRL/snr_5_best_params_epoch@22.pkl')
-params_tl  = nd.load('/floyd/input/pretrained/PRL/snr_3_best_params_epoch@27.pkl')
+params_tl  = nd.load('/floyd/input/pretrained/pretrained_models/PRL/snr_10_best_params_epoch@31.pkl')
 
-SNR_list = [0.2,0.1]
+SNR_list = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
 i = 0
 while True:
     try:
@@ -83,16 +84,24 @@ while True:
                     train = train_data,
                     test = test_data,
                     SNR = snr,   params = params_tl,
-                    num_epoch=30, 
+                    num_epoch=40,
                     batch_size = 256
                     ,  lr_rate=0.0003
-                    ,save_checkpoints_address = './PRL/'
+                    ,save_checkpoints_address = './pretrained_models/PRL/'
                     ,checkpoint_name = 'snr_%s' %int(snr*10),verbose =True, )
     try:
         Solver.Training()
-    except mx.MXNetError:
+    except mx.MXNetError as e:
+        print(e)
         print('Rerunning...')
         continue
 
     params_tl = Solver.best_params
     i += 1
+
+
+# floyd run --gpu \
+# --data wctttty/datasets/gw_waveform/1:waveform \
+# --data wctttty/projects/python4gw/112:pretrained \
+# -m "PRL_2" \
+# "bash setup_floydhub.sh && python run_PRL.py"

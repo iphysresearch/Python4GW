@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地
 
 from utils import *
 from data_utils import *
-from models.solver_cnn import *
+from models.solver_cnn_ import *
 from models.ConvNet import *
 
 import numpy as np
@@ -66,8 +66,8 @@ def plot_AUC(AUC):
     plt.savefig('./AUC_dialute02_0605040302.png', dpi=300,bbox_inches='tight')
 
 ### Load Data ####
-GW_address = '/floyd/input/waveform/'
-
+# GW_address = '/floyd/input/waveform/'
+GW_address = './data/'
 data = pd.DataFrame(np.load(GW_address+'GW_H1.npy'), index=np.load(GW_address+'GW_H1_index.npy'))
 print('Raw data: ', data.shape)
 peak_samppoint = data.values.argmax(axis=1)
@@ -91,9 +91,10 @@ train_masses = [masses for masses in data.index if float(masses.split('|')[0]) %
 train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
-MODEL = 'OURs'
-pretrained_add = '/floyd/input/pretrained/%s/' %MODEL
-os.system('ls -a %s | grep best > test.txt' %pretrained_add)
+MODEL = 'dialute'
+# pretrained_add = '/floyd/input/pretrained/%s/' %MODEL
+pretrained_add = './pretrained_models/OURs_finetune/'
+os.system('ls -a %s | grep best | grep %s > test.txt' %(pretrained_add, MODEL))
 params_adds = pd.read_csv('./test.txt', header=None)
 os.system('rm test.txt')
 params_adds['dialute'] = params_adds[0].map(lambda x: int(x.split('_')[1]))
@@ -102,11 +103,11 @@ params_adds = params_adds.sort_values('dialute', ascending=False)[0].values.toli
 print(params_adds)
 
 auc_frame = []
-# for param_add, hyperparam in zip(params_adds, Fine_tune('dialute', [3,2])):
-for param_add, hyperparam in zip(params_adds, Fine_tune('dialute', [4,5,6])):    
+for param_add, hyperparam in zip(params_adds, Fine_tune('dialute', [6,5,4,3,2,1])):
+# for param_add, hyperparam in zip(params_adds, Fine_tune('dialute', [4,5,6])):    
 
     print('Now working on:')
-    test(Fine_tune('dialute', [4,5,6]))
+    test(Fine_tune('dialute', [6,5,4,3,2,1]))
     param = nd.load(pretrained_add + param_add)
 
     hidden_dim = hyperparam['hidden_dim']
@@ -154,7 +155,7 @@ for param_add, hyperparam in zip(params_adds, Fine_tune('dialute', [4,5,6])):
         auc_var_list = []
         i = 0
         while True:
-            if i == 10: break
+            if i == 4: break
             else: pass
             try:
                 prob, label , _= Solver.predict_nd()
@@ -171,6 +172,5 @@ for param_add, hyperparam in zip(params_adds, Fine_tune('dialute', [4,5,6])):
         
         auc_list.append(auc_var_list)
     auc_frame.append(auc_list)
-os.system('rm -rf ./*')
-np.save('./AUC_%s' %MODEL, np.array(auc_frame))
-plot_AUC(np.array(auc_frame))
+# os.system('rm -rf ./*')
+np.save('./AUC_data/AUC_%s' %MODEL, np.array(auc_frame))

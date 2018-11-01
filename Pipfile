@@ -4,21 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-jupyterlab = "*"
-jupyter = "*"
-mxnet = "*"
-pandas = "*"
-numpy = "*"
-scipy = "*"
-matplotlib = "*"
-ipython = "*"
-sympy = "*"
-nose = "*"
-pipenv = "*"
-tox-pipenv = "*"
-pytest = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.6"
+python_version = "3.7"

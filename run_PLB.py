@@ -24,6 +24,7 @@ print()
 
 ### Load Data ####
 GW_address = '/floyd/input/waveform/'
+# GW_address = './data/'
 
 data = pd.DataFrame(np.load(GW_address+'GW_H1.npy'), index=np.load(GW_address+'GW_H1_index.npy'))
 print('Raw data: ', data.shape)
@@ -49,10 +50,10 @@ train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
 ## Training
-# params_tl  = None
+params_tl  = None
 # for snr in list([1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
-params_tl  = nd.load('/floyd/input/pretrained/PLB/snr_2_best_params_epoch@13.pkl')
-SNR_list = [0.1]
+# params_tl  = nd.load('/floyd/input/pretrained/PLB/snr_2_best_params_epoch@13.pkl')
+SNR_list = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
 i = 0
 while True:
     try:
@@ -79,15 +80,16 @@ while True:
                     train = train_data,
                     test = test_data,
                     SNR = snr,   params = params_tl,
-                    num_epoch=30, 
+                    num_epoch=40,
                     batch_size = 256
                     ,  lr_rate=0.0003
-                    ,save_checkpoints_address = './PLB/'
+                    ,save_checkpoints_address = './pretrained_models/PLB/'
                     ,checkpoint_name = 'snr_%s' %int(snr*10),verbose =True, )
 
     try:
         Solver.Training()
-    except mx.MXNetError:
+    except mx.MXNetError as e:
+        print(e)
         print('Rerunning...')
         continue
 

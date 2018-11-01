@@ -308,7 +308,7 @@ def fir2(nn, ff, aa, **kwargs):
     a = 1           # Denominator. 
     return b
 
-def pre_fir(targetSens = 'ZERO_DET_high_P.txt', fLow=20, fHigh=9000, fs = 8192, filtOrdr = 100):
+def pre_fir(targetSens = 'ZERO_DET_high_P.txt', fLow=9, fHigh=9000, fs = 4096, filtOrdr = 1000):
     """
     Obtain filter coefficients for preparing to generate the colored noises. (ALL NUMPY)
     Input:
@@ -362,7 +362,7 @@ def GenNoise_matlab_np(shape, b):
     return outputNoise
 
 
-def GenNoise_matlab_nd(shape, b):
+def GenNoise_matlab_nd(shape, params):
     """
     Generate noise(ONLY MXNet GPU).
     Pass a white noise sequence through the designed filter 'b'.
@@ -373,11 +373,17 @@ def GenNoise_matlab_nd(shape, b):
     - outputNoise: mx.ndarray with the shape of 'shape'.
     """
     (numsamples, numsamplepoints) = shape
-    inputNoise = nd.random.randn(numsamples, numsamplepoints, ctx=ctx)
-    outputNoise = fftfilt_nd(b.reshape((-1,1)),inputNoise.T)
+    inputNoise = nd.random.randn(numsamples, numsamplepoints, ctx=ctx)   
+
+    outputNoise = fftfilt_nd(inputNoise.T, params)
     return outputNoise
 
-def fftfilt_nd(b, x, nfft=None):
+def pre_fftfilt(b, shape, nfft=None):
+    
+    (numsamples, numsamplepoints) = shape
+    inputNoise = nd.random.randn(numsamples, numsamplepoints, ctx=mx.cpu())    
+    b, x = b.reshape((-1,1)),inputNoise.T
+    
     m = x.shape[0]
     if m == 1:
         x = x.reshape((-1,1))  # turn row into a column
@@ -428,13 +434,19 @@ def fftfilt_nd(b, x, nfft=None):
     catch ME
         throwAsCaller(ME);
     end'''
+    return (b, m, nx, nb, L, nfft)
+    
+
+def fftfilt_nd(x, params):
+    (b, m, nx, nb, L, nfft) = params
+
     B = nd.contrib.fft(data = nd.concatenate([b.T, nd.zeros(shape=(1,(nfft-b.size)), ctx=ctx)], axis = 1))
     if b.size == 1:
         B = B.T     # make sure fft of B is a column (might be a row if b is scalar)
     if b.shape[1] == 1:
         B = nd.repeat(data = B, repeats=x.shape[1], axis=0)    # replicate the column B
-        B_re = B[:,::2]
-        B_im = B[:,1::2]        
+        B_re = nd.slice(data = B, begin = (0,0), end = (0,None),step=(1,2))
+        B_im = nd.slice(data = B, begin = (0,1), end = (0,None),step=(1,2))
     if x.shape[1] == 1:
         x = nd.repeat(data = x, repeats=b.shape[1], axis=1)   # replicate the column x 
     y = nd.zeros_like(x.T)
@@ -447,8 +459,8 @@ def fftfilt_nd(b, x, nfft=None):
         else:
             temp = nd.slice(x , begin = istart-1, end=iend).T
             X = nd.contrib.fft(data = nd.concatenate([temp, nd.zeros(shape=(temp.shape[0],(nfft-temp.shape[1])), ctx=ctx)], axis = 1))
-            X_re = X[:,::2]
-            X_im = X[:,1::2]            
+            X_re = nd.slice(data = X, begin = (0,0), end = (0,None),step=(1,2))
+            X_im = nd.slice(data = X, begin = (0,1), end = (0,None),step=(1,2))
         
         XprodB_re = (X_re*B_re - X_im*B_im)
         XprodB_im = (X_re*B_im + X_im*B_re)
@@ -459,7 +471,7 @@ def fftfilt_nd(b, x, nfft=None):
         
         yend = min(nx,istart+nfft-1)
     
-        y[:,istart-1:yend] = y[:, istart-1:yend] + Y[:,:(yend-istart+1)]
+        y[:,istart-1:yend] = nd.slice(data = y, begin = (0,istart-1), end = (0,yend),step=(1,1)) + nd.slice(data = Y, begin = (0,0), end = (0,yend-istart+1),step=(1,1))
         istart += L
 #     y = real(y)
 

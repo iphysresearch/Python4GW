@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地
 
 from utils import *
 from data_utils import *
-from models.solver_cnn import *
+from models.solver_cnn_ import *
 from models.ConvNet import *
 
 import numpy as np
@@ -24,6 +24,7 @@ print()
 
 ### Load Data ####
 GW_address = '/floyd/input/waveform/'
+# GW_address = './data/'
 
 data = pd.DataFrame(np.load(GW_address+'GW_H1.npy'), index=np.load(GW_address+'GW_H1_index.npy'))
 print('Raw data: ', data.shape)
@@ -56,7 +57,7 @@ test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 # params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_3_best_params_epoch@3.pkl')
 SNR_list = [1, 0.6, 0.4, 0.3, 0.2]
 num_layers_list = [3, 4, 5, 6, 7]
-
+save_address = 'OURs_ft_conv_params'
 def temp(x):
     if x == 1: return (16,)
     else: return temp(x-1) + (16*2**(x-1),)
@@ -91,11 +92,11 @@ for num_layers in num_layers_list:
                         train = train_data,
                         test = test_data,
                         SNR = snr,   params = params_tl,
-                        num_epoch=30, 
-                        batch_size = 256
-                        ,  lr_rate=0.0003
-                        ,save_checkpoints_address = './OURs/'
-                        ,checkpoint_name = 'num_convlayers%s' %int(num_layers),verbose =True, )
+                        num_epoch=40, rand_times = 2,
+                        batch_size = 256, stacking_size = 256,
+                        lr_rate=0.0003
+                        ,save_checkpoints_address = './pretrained_models/%s/' %save_address
+                        ,checkpoint_name = 'num_convlayers%s' %int(num_layers),floydhub_verbose =True, )
 
         try:
             Solver.Training()
@@ -105,3 +106,8 @@ for num_layers in num_layers_list:
 
         params_tl = Solver.best_params
         i += 1
+
+# floyd run --gpu \
+# --data wctttty/datasets/gw_waveform/1:waveform \
+# -m "OURs_ft_conv_params" \
+# "bash setup_floydhub.sh && python run_ft_conv_params.py"

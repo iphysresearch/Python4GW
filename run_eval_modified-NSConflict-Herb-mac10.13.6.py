@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地
 
 from utils import *
 from data_utils import *
-from models.solver_cnn import *
+from models.solver_cnn_ import *
 from models.ConvNet import *
 
 import numpy as np
@@ -18,7 +18,8 @@ test_ctx()
 
 
 ### Load Data ####
-GW_address = '/floyd/input/waveform/'
+# GW_address = '/floyd/input/waveform/'
+GW_address = './data/'
 
 data = pd.DataFrame(np.load(GW_address+'GW_H1.npy'), index=np.load(GW_address+'GW_H1_index.npy'))
 print('Raw data: ', data.shape)
@@ -43,13 +44,14 @@ train_masses = [masses for masses in data.index if float(masses.split('|')[0]) %
 train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
-MODEL = 'PRL'
-pretrained_add = '/floyd/input/pretrained/pretrained_models/%s/' %MODEL
+MODEL = 'OURs_modified'
+# pretrained_add = '/floyd/input/pretrained/pretrained_models/%s/' %MODEL
+pretrained_add = './pretrained_models/%s/' %MODEL
 os.system('ls -a %s | grep best > test.txt' %pretrained_add)
 params_adds = pd.read_csv('./test.txt', header=None)
 os.system('rm test.txt')
 params_adds['snr'] = params_adds[0].map(lambda x: int(x.split('_')[1]))
-params_adds = params_adds.sort_values('snr', ascending=True)[0].values.tolist()
+params_adds = params_adds.sort_values('snr', ascending=False)[0].values.tolist()
 
 print(params_adds)
 
@@ -58,22 +60,21 @@ for param_add in params_adds:
     print('Now working on  %s' %param_add)
     param = nd.load(pretrained_add + param_add)
     
-    PRL = ConvNet(conv_params = {'kernel': ((1,64), (1,32), (1,32), (1,16),(1,16),(1,16)), 
-                                'num_filter': (8, 8, 16, 16, 32, 32),
-                                'stride': ((1,1), (1,1), (1,1),(1,1),(1,1),(1,1),),
-                                'padding': ((0,0), (0,0), (0,0),(0,0),(0,0),(0,0),),
-                                'dilate': ((1,1), (1,1), (1,1),(1,1),(1,1),(1,1),)},
-                    act_params = {'act_type': ('elu', 'elu', 'elu', 'elu','elu','elu','elu','elu')},
-                    pool_params = {'pool_type': ('max', 'max', 'max','max','max','max',),
-                                'kernel': ((1,1), (1,8), (1,1),(1,6),(1,1),(1,4)),
-                                'stride': ((1,2), (1,2), (1,2),(1,2),(1,2),(1,2)),
-                                'padding': ((0,0),(0,0), (0,0), (0,0),(0,0),(0,0)),
-                                'dilate': ((1,1), (1,1), (1,1),(1,1),(1,1),(1,1))},
-                    fc_params = {'hidden_dim': (64,64)}, drop_prob = 0.5, 
-                    params_inits = param,
+    OURs_modified = ConvNet(conv_params = {'kernel': ((1,16), (1,8), (1,8)), 
+                                'num_filter': (32, 64, 128,),
+                                'stride': ((1,1), (1,1), (1,1),),
+                                'padding': ((0,0), (0,0), (0,0),),
+                                'dilate': ((1,1), (1,1), (1,1),)},
+                    act_params = {'act_type': ('elu', 'elu', 'elu', 'elu',)},
+                    pool_params = {'pool_type': ('max', 'max', 'max',),
+                                'kernel': ((1,4), (1,4), (1,4),),
+                                'stride': ((1,2), (1,2), (1,2),),
+                                'padding': ((0,0),(0,0), (0,0),),
+                                'dilate': ((1,1), (1,1), (1,1),)},
+                    fc_params = {'hidden_dim': (128,)}, drop_prob = 0, 
+#                         input_dim = (2,1,8192)
                     input_dim = (1,1,8192)
-                    )
-
+                        )
     auc_list = []
     snr_list = np.linspace(0.1, 1, 10)
     j = 0
@@ -85,7 +86,7 @@ for param_add in params_adds:
             break
 
         try:
-            Solver = Solver_nd(model = PRL, 
+            Solver = Solver_nd(model = OURs_modified, 
                             train = train_data,
                             test = test_data,
                             SNR = snr, 
@@ -107,16 +108,19 @@ for param_add in params_adds:
             auc = metrics.auc(fpr, tpr)
             auc_var_list.append(auc)
             print('{"metric": "AUC for SNR(model,test)=(%s,(0.1~10))", "value": %.5f}' %(param_add.split('_')[1], auc) )
+
             i += 1
         j += 1
         
         auc_list.append(auc_var_list)
     auc_frame.append(auc_list)
-np.save('./AUC_%s' %MODEL, np.array(auc_frame))
+# os.system('rm -rf ./*')
+np.save('./AUC_data/AUC_%s' %MODEL, np.array(auc_frame))
+# np.save('./AUC_%s' %MODEL, np.array(auc_frame))
 
 
 # floyd run --gpu \
 # --data wctttty/datasets/gw_waveform/1:waveform \
-# --data wctttty/projects/python4gw/117:pretrained \
-# -m "AUC_PRL2" \
-# "bash setup_floydhub.sh && python run_eval_PRL.py"
+# --data wctttty/projects/python4gw/147:pretrained \
+# -m "AUC_OURs_modified" \
+# "bash setup_floydhub.sh && python run_eval_modified.py"
