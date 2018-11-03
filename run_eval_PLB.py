@@ -54,6 +54,8 @@ params_adds = params_adds.sort_values('snr', ascending=False)[0].values.tolist()
 
 print(params_adds)
 
+fpr_frame = []
+tpr_frame = []
 auc_frame = []
 for param_add in params_adds:
     print('Now working on  %s' %param_add)
@@ -76,7 +78,10 @@ for param_add in params_adds:
                             )
 
     auc_list = []
+    fpr_list = []
+    tpr_list = []
     snr_list = np.linspace(0.1, 1, 10)
+    # snr_list = (np.array([0.01]+np.arange(0.05,1.04,0.05).tolist()))[::-1]
     j = 0
     while True:
         try:
@@ -96,9 +101,10 @@ for param_add in params_adds:
             continue
 
         auc_var_list = []
+        fpr_var_list, tpr_var_list = [], []
         i = 0
         while True:
-            if i == 4: break
+            if i == 5: break
             else: pass
             try:
                 prob, label , _= Solver.predict_nd()
@@ -108,18 +114,25 @@ for param_add in params_adds:
             fpr, tpr, thresholds = metrics.roc_curve(label, prob, pos_label=1)
             auc = metrics.auc(fpr, tpr)
             auc_var_list.append(auc)
+            fpr_var_list.append(fpr)
+            tpr_var_list.append(tpr)         
             print('{"metric": "AUC for SNR(model,test)=(%s,(0.1~10))", "value": %.5f}' %(param_add.split('_')[1], auc) )
             i += 1
         j += 1
 
-        
         auc_list.append(auc_var_list)
+        fpr_list.append(fpr_var_list)
+        tpr_list.append(tpr_var_list)
     auc_frame.append(auc_list)
-np.save('./AUC_%s' %MODEL, np.array(auc_frame))
+    fpr_frame.append(fpr_list)
+    tpr_frame.append(tpr_list)
 
+np.save('./AUC_%s' %MODEL, np.array(auc_frame))
+np.save('./fpr_%s' %MODEL, np.array(fpr_frame))
+np.save('./tpr_%s' %MODEL, np.array(tpr_frame))    
 
 # floyd run --gpu \
 # --data wctttty/datasets/gw_waveform/1:waveform \
-# --data wctttty/projects/python4gw/114:pretrained \
-# -m "AUC_PLB2" \
+# --data wctttty/projects/python4gw/155:pretrained \
+# -m "AUC_PLB_new" \
 # "bash setup_floydhub.sh && python run_eval_PLB.py"

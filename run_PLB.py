@@ -54,6 +54,7 @@ params_tl  = None
 # for snr in list([1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
 # params_tl  = nd.load('/floyd/input/pretrained/PLB/snr_2_best_params_epoch@13.pkl')
 SNR_list = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
+# SNR_list = (np.array([0.01]+np.arange(0.05,1.04,0.05).tolist()))[::-1]
 i = 0
 while True:
     try:
@@ -80,11 +81,11 @@ while True:
                     train = train_data,
                     test = test_data,
                     SNR = snr,   params = params_tl,
-                    num_epoch=40,
+                    num_epoch=30,
                     batch_size = 256
-                    ,  lr_rate=0.0003
+                    ,  lr_rate=0.0001
                     ,save_checkpoints_address = './pretrained_models/PLB/'
-                    ,checkpoint_name = 'snr_%s' %int(snr*10),verbose =True, )
+                    ,checkpoint_name = 'snr_%s' %int(snr*100),floydhub_verbose =True, )
 
     try:
         Solver.Training()

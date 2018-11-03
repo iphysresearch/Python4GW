@@ -655,14 +655,6 @@ class Solver_nd(object):
             label = label.as_in_context(ctx)
             label = nd.one_hot(label, self.model.output_dim).asnumpy()[:,1].tolist()
             output, _ = self.model.network(X=data)
-            print(label, output)
-            # print(data)
-            nd.save('./output', data)
-            
-            # import matplotlib.pyplot as plt
-            # plt.plot(data.asnumpy()[0][0][0].tolist())
-            # plt.show()
-            break
             prob = transform_softmax(output)[:,1].asnumpy().tolist()
             prob_list.extend(prob)
             label_list.extend(label)

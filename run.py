@@ -11,6 +11,7 @@ sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地
 from utils import *
 from data_utils import *
 # from models.solver_cnn import *
+from data_noise import *
 from models.solver_cnn_ import *
 from models.ConvNet import *
 
@@ -33,8 +34,8 @@ def usage():
     ''')
 
 ### Load Data ####
-# GW_address = '/floyd/input/waveform/'
-GW_address = './data/'
+GW_address = '/floyd/input/waveform/'
+# GW_address = './data/'
 
 data = pd.DataFrame(np.load(GW_address+'GW_H1.npy'), index=np.load(GW_address+'GW_H1_index.npy'))
 print('Raw data: ', data.shape)
@@ -59,11 +60,18 @@ train_masses = [masses for masses in data.index if float(masses.split('|')[0]) %
 train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
+b = nd.array(pre_fir().reshape((-1,1)), ctx=ctx)
+
+times = 10
+num_noise = (train_data.shape[0]+test_data.shape[0]) * times
+pp = pre_fftfilt(b, shape = (num_noise, train_data.shape[-1]), nfft=None)
+localnoise = GenNoise_matlab_nd(shape = (num_noise, train_data.shape[-1]), params = pp)
+
 opts, args = getopt.getopt(sys.argv[1:], "hoblm")
 for op, value in opts:
     if op == "-o":
         print('Using model "OURs"!')
-        save_address = 'OURs'
+        save_address = 'OURs_new2'
         model = ConvNet(conv_params = {'kernel': ((1,16), (1,8), (1,8)), 
                                     'num_filter': (16, 32, 64,),
                                     'stride': ((1,1), (1,1), (1,1),),
@@ -145,8 +153,9 @@ params_tl  = None
 # params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_8_best_params_epoch@16.pkl')
 # for snr in list([0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
 # params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_2_best_params_epoch@20.pkl')
-SNR_list = [1, 1, 0.9, 0.9, 0.8, 0.8, 0.7, 0.7, 0.6, 0.6, 0.5, 0.5, 0.4, 0.4,0.3, 0.3,0.2, 0.2,0.1,0.1]
-# SNR_list = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2,0.1]
+# SNR_list = [1, 1, 0.9, 0.9, 0.8, 0.8, 0.7, 0.7, 0.6, 0.6, 0.5, 0.5, 0.4, 0.4,0.3, 0.3,0.2, 0.2,0.1,0.1]
+# SNR_list = (np.array([0.01]+np.arange(0.05,1.04,0.05).tolist()))[::-1]
+SNR_list = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2,0.1]
 i = 0
 while True:
     try:
@@ -159,10 +168,10 @@ while True:
                     test = test_data,#[:100,:],
                     SNR = snr,   params = params_tl,
                     num_epoch=30, rand_times = 2,
-                    batch_size = 256//2, stacking_size = 256//2,
-                    lr_rate=0.0003
+                    batch_size = 256, stacking_size = 256,
+                    lr_rate=0.0001#, localnoise = localnoise
                     ,save_checkpoints_address = './pretrained_models/%s/' %save_address
-                    ,checkpoint_name = 'snr_%s' %int(snr*10), floydhub_verbose =False, )
+                    ,checkpoint_name = 'snr_%s' %int(snr*100), floydhub_verbose =False, )
 
     try:
         Solver.Training()
