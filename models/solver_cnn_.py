@@ -202,7 +202,7 @@ class Solver_nd(object):
         # self.test_shift_list.extend(test_shift_list.asnumpy().tolist())
         self.train = train_.reshape(self.train.shape[0]*self.rand_times,self.num_channel,-1).as_in_context(ctx)
         self.test = test_.reshape(self.test.shape[0]*self.rand_times,self.num_channel,-1).as_in_context(ctx)
-        print('After we random the data:', self.train.shape, self.test.shape)
+        # print('After we random the data:', self.train.shape, self.test.shape)
 
     def _gen_yshape(self):
         self.train_size = self.train.shape[0]
@@ -229,7 +229,7 @@ class Solver_nd(object):
         
         # noise for mixing
         noise = self.gen_noise().reshape(shape= (self.noiseAll_size,) + (self.train.shape[1:]))
-        print('shape of the noise for mixing',noise.shape)
+        # print('shape of the noise for mixing',noise.shape)
         try: sigma = self.train.max(axis = 2) / float(self.SNR) / nd.array(noise[:self.train_size].asnumpy().std(axis = 2,dtype='float64'),ctx=ctx)
         except: sigma = self.train.max(axis = -1) / float(self.SNR) / nd.array(noise[:self.train_size].asnumpy().std(axis = -1,dtype='float64'),ctx=ctx)            
         signal_train = nd.divide(self.train, sigma.reshape((self.train_size,self.num_channel,-1)))
@@ -242,7 +242,7 @@ class Solver_nd(object):
         
         # noise for pure conterpart
         noise = self.gen_noise().reshape(shape= (self.noiseAll_size,) + (self.train.shape[1:]))
-        print('shape of the noise for pure noise conterpart',noise.shape)
+        # print('shape of the noise for pure noise conterpart',noise.shape)
         X_train = Normolise_nd(nd.concat(data_train, noise[:self.train_size], dim=0), self.num_channel)
         try: dataset_train = gluon.data.ArrayDataset(X_train, self.y_train)
         except: dataset_train = gluon.data.ArrayDataset(X_train, self.y_train)

@@ -34,8 +34,8 @@ def usage():
     ''')
 
 ### Load Data ####
-GW_address = '/floyd/input/waveform/'
-# GW_address = './data/'
+# GW_address = '/floyd/input/waveform/'
+GW_address = './data/'
 
 data = pd.DataFrame(np.load(GW_address+'GW_H1.npy'), index=np.load(GW_address+'GW_H1_index.npy'))
 print('Raw data: ', data.shape)
@@ -127,17 +127,17 @@ for op, value in opts:
         print('Using model "OURs_modified"!')
         save_address = 'OURs_modified'
         model = ConvNet(conv_params = {'kernel': ((1,16), (1,8), (1,8)), 
-                                    'num_filter': (32, 64, 128,),
+                                    'num_filter': (16, 32, 64,),
                                     'stride': ((1,1), (1,1), (1,1),),
                                     'padding': ((0,0), (0,0), (0,0),),
                                     'dilate': ((1,1), (1,1), (1,1),)},
                         act_params = {'act_type': ('elu', 'elu', 'elu', 'elu',)},
                         pool_params = {'pool_type': ('max', 'max', 'max',),
-                                    'kernel': ((1,4), (1,4), (1,4),),
+                                    'kernel': ((1,16), (1,16), (1,16),),
                                     'stride': ((1,2), (1,2), (1,2),),
                                     'padding': ((0,0),(0,0), (0,0),),
                                     'dilate': ((1,1), (1,1), (1,1),)},
-                        fc_params = {'hidden_dim': (256,)}, drop_prob = 0, 
+                        fc_params = {'hidden_dim': (256, 128, 64)}, drop_prob = 0.5, 
 #                         input_dim = (2,1,8192)
                         input_dim = (1,1,8192)
                             )

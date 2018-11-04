@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地
 
 from utils import *
 from data_utils import *
-from models.solver_cnn import *
+from models.solver_cnn_ import *
 from models.ConvNet import *
 
 import numpy as np
@@ -47,8 +47,8 @@ train_masses = [masses for masses in data.index if float(masses.split('|')[0]) %
 train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
-MODEL = 'OURs_ft_conv_params'
-pretrained_add = '/floyd/input/pretrained/pretrained_models/%s/' %MODEL
+MODEL = 'OURs_new_ft_conv_params'
+pretrained_add = '/floyd/input/pretrained/pretrained_models/OURs_fine_tune/%s/' %MODEL
 os.system('ls -a %s | grep best > test.txt' %pretrained_add)
 params_adds = pd.read_csv('./test.txt', header=None)
 os.system('rm test.txt')
@@ -56,7 +56,7 @@ params_adds['drop_prob'] = params_adds[0].map(lambda x: (x.split('_')[1]))
 params_adds = params_adds.sort_values('drop_prob', ascending=True)[0].values.tolist()
 
 print(params_adds)
-num_layers_list = [3, 4, 5, 6, 7]
+num_layers_list = [2, 3, 4, 5, 6, 7]
 
 auc_frame = []
 for param_add, num_layers in zip(params_adds, num_layers_list):
@@ -104,7 +104,7 @@ for param_add, num_layers in zip(params_adds, num_layers_list):
         auc_var_list = []
         i = 0
         while True:
-            if i == 4: break
+            if i == 2: break
             else: pass
             try:
                 prob, label , _= Solver.predict_nd()
@@ -126,6 +126,6 @@ np.save('./AUC_%s' %MODEL, np.array(auc_frame))
 
 # floyd run --gpu \
 # --data wctttty/datasets/gw_waveform/1:waveform \
-# --data wctttty/projects/python4gw/121:pretrained \
-# -m "AUC_ft_convlayer" \
+# --data wctttty/projects/python4gw/199:pretrained \
+# -m "AUC_new_ft_convlayer" \
 # "bash setup_floydhub.sh && python run_eval_ft_convlayer.py"

@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地
 
 from utils import *
 from data_utils import *
-from models.solver_cnn import *
+from models.solver_cnn_ import *
 from models.ConvNet import *
 
 import numpy as np
@@ -61,18 +61,19 @@ for param_add in params_adds:
     param = nd.load(pretrained_add + param_add)
     
     OURs_modified = ConvNet(conv_params = {'kernel': ((1,16), (1,8), (1,8)), 
-                                'num_filter': (32, 64, 128,),
+                                'num_filter': (16, 32, 64,),
                                 'stride': ((1,1), (1,1), (1,1),),
                                 'padding': ((0,0), (0,0), (0,0),),
                                 'dilate': ((1,1), (1,1), (1,1),)},
                     act_params = {'act_type': ('elu', 'elu', 'elu', 'elu',)},
                     pool_params = {'pool_type': ('max', 'max', 'max',),
-                                'kernel': ((1,4), (1,4), (1,4),),
+                                'kernel': ((1,16), (1,16), (1,16),),
                                 'stride': ((1,2), (1,2), (1,2),),
                                 'padding': ((0,0),(0,0), (0,0),),
                                 'dilate': ((1,1), (1,1), (1,1),)},
-                    fc_params = {'hidden_dim': (256,)}, drop_prob = 0, 
+                    fc_params = {'hidden_dim': (256, 128, 64)}, drop_prob = 0.5, 
 #                         input_dim = (2,1,8192)
+                    params_inits = param,
                     input_dim = (1,1,8192)
                         )
     auc_list = []
@@ -90,19 +91,17 @@ for param_add in params_adds:
                             train = train_data,
                             test = test_data,
                             SNR = snr, 
-                            batch_size = 10)
+                            batch_size = 256)
         except mx.MXNetError:
             print('Rerunning...')
             continue
         auc_var_list = []
         i = 0
         while True:
-            if i == 10: break
+            if i == 2: break
             else: pass
             try:
                 prob, label , _= Solver.predict_nd()
-                print(prob[:10])
-                print(label[:10])
             except mx.MXNetError:
                 print('Rerunning...')
                 continue

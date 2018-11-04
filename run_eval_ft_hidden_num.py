@@ -57,8 +57,8 @@ def test(diedai):
 
 
 ### Load Data ####
-# GW_address = '/floyd/input/waveform/'
-GW_address = './data/'
+GW_address = '/floyd/input/waveform/'
+# GW_address = './data/'
 
 data = pd.DataFrame(np.load(GW_address+'GW_H1.npy'), index=np.load(GW_address+'GW_H1_index.npy'))
 print('Raw data: ', data.shape)
@@ -83,10 +83,10 @@ train_masses = [masses for masses in data.index if float(masses.split('|')[0]) %
 train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
-MODEL = 'fc_params'
-# pretrained_add = '/floyd/input/pretrained/%s/' %MODEL
-pretrained_add = './pretrained_models/OURs_finetune/'
-os.system('ls -a %s | grep best | grep %s > test.txt' %(pretrained_add, MODEL))
+MODEL = 'OURs_new_ft_fc_params'
+pretrained_add = '/floyd/input/pretrained/pretrained_models/OURs_fine_tune/%s/' %MODEL
+# pretrained_add = './pretrained_models/OURs_fine_tune/OURs_new_ft_fc_params'
+os.system('ls -a %s | grep best > test.txt' %(pretrained_add))
 params_adds = pd.read_csv('./test.txt', header=None)
 os.system('rm test.txt')
 params_adds['drop_prob'] = params_adds[0].map(lambda x: int(x.split('_')[2]))
@@ -148,7 +148,7 @@ for param_add, hyperparam in zip(params_adds, Fine_tune('fc_params_act_type', fc
         auc_var_list = []
         i = 0
         while True:
-            if i == 4: break
+            if i == 2: break
             else: pass
             try:
                 prob, label , _= Solver.predict_nd()
@@ -165,6 +165,13 @@ for param_add, hyperparam in zip(params_adds, Fine_tune('fc_params_act_type', fc
         
         auc_list.append(auc_var_list)
     auc_frame.append(auc_list)
-# os.system('rm -rf ./*')
-np.save('./AUC_data/AUC_%s' %MODEL, np.array(auc_frame))
+os.system('rm -rf ./*')
+np.save('./AUC_%s' %MODEL, np.array(auc_frame))
 
+
+
+# floyd run --gpu \
+# --data wctttty/datasets/gw_waveform/1:waveform \
+# --data wctttty/projects/python4gw/193:pretrained \
+# -m "AUC_new_ft_fc_params" \
+# "bash setup_floydhub.sh && python run_eval_ft_hidden_num.py"

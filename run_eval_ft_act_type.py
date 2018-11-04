@@ -57,8 +57,8 @@ def test(diedai):
 
 
 ### Load Data ####
-# GW_address = '/floyd/input/waveform/'
-GW_address = './data/'
+GW_address = '/floyd/input/waveform/'
+# GW_address = './data/'
 data = pd.DataFrame(np.load(GW_address+'GW_H1.npy'), index=np.load(GW_address+'GW_H1_index.npy'))
 print('Raw data: ', data.shape)
 peak_samppoint = data.values.argmax(axis=1)
@@ -83,22 +83,25 @@ train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
 
-MODEL = 'act_type_elu'
-# pretrained_add = '/floyd/input/pretrained/%s/' %MODEL
-pretrained_add = './pretrained_models/OURs_finetune/'
-os.system('ls -a %s | grep best | grep %s > test.txt' %(pretrained_add, MODEL))
+MODEL = 'OURs_new_ft_act_type'
+pretrained_add = '/floyd/input/pretrained/pretrained_models/OURs_fine_tune/%s/' %MODEL
+# pretrained_add = './pretrained_models/OURs_finetune/OURs_new_ft_act_type'
+os.system('ls -a %s | grep best > test.txt' %(pretrained_add))
 params_adds = pd.read_csv('./test.txt', header=None)
 os.system('rm test.txt')
 params_adds['drop_prob'] = params_adds[0].map(lambda x: (x.split('_')[2]))
-params_adds = params_adds.sort_values('drop_prob', ascending=False)[0].values.tolist()
+params_adds = params_adds.sort_values('drop_prob', ascending=False)[0].values.tolist()  #['relu','elu']
 
 print(params_adds)
 
 auc_frame = []
-for param_add, hyperparam in zip(params_adds, Fine_tune('fc_params_act_type', [({'hidden_dim': (64,)}, {'act_type': ('elu',)*4})])):
+for param_add, hyperparam in zip(params_adds,  Fine_tune('fc_params_act_type', [({'hidden_dim': (64,)}, {'act_type': ('relu',)*4}),
+                                                                                 ({'hidden_dim': (64,)}, {'act_type': ('elu',)*4})])):
 
     print('Now working on:')
-    test(Fine_tune('fc_params_act_type', [({'hidden_dim': (64,)}, {'act_type': ('elu',)*4})]))
+    # test(Fine_tune('fc_params_act_type', [({'hidden_dim': (64,)}, {'act_type': ('elu',)*4})]))
+    print(hyperparam)
+    print(param_add)
     param = nd.load(pretrained_add + param_add)
 
     hidden_dim = hyperparam['hidden_dim']
@@ -146,7 +149,7 @@ for param_add, hyperparam in zip(params_adds, Fine_tune('fc_params_act_type', [(
         auc_var_list = []
         i = 0
         while True:
-            if i == 4: break
+            if i == 2: break
             else: pass
             try:
                 prob, label , _= Solver.predict_nd()
@@ -163,5 +166,11 @@ for param_add, hyperparam in zip(params_adds, Fine_tune('fc_params_act_type', [(
         
         auc_list.append(auc_var_list)
     auc_frame.append(auc_list)
-# os.system('rm -rf ./*')
-np.save('./AUC_data/AUC_%s' %MODEL, np.array(auc_frame))
+os.system('rm -rf ./*')
+np.save('./AUC_%s' %MODEL, np.array(auc_frame))
+
+# floyd run --gpu \
+# --data wctttty/datasets/gw_waveform/1:waveform \
+# --data wctttty/projects/python4gw/197:pretrained \
+# -m "AUC_new_ft_act_type" \
+# "bash setup_floydhub.sh && python run_eval_ft_act_type.py"

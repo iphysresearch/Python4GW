@@ -82,8 +82,8 @@ train_masses = [masses for masses in data.index if float(masses.split('|')[0]) %
 train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
-MODEL = 'OURs_ft_num_filter'
-pretrained_add = '/floyd/input/pretrained/pretrained_models/%s/' %MODEL
+MODEL = 'OURs_new_ft_num_filter'
+pretrained_add = '/floyd/input/pretrained/pretrained_models/OURs_fine_tune/%s/' %MODEL
 # pretrained_add = './pretrained_models/OURs_finetune/'
 os.system('ls -a %s | grep best > test.txt' %(pretrained_add))
 params_adds = pd.read_csv('./test.txt', header=None)
@@ -94,10 +94,12 @@ params_adds = params_adds.sort_values('num_filter', ascending=False)[0].values.t
 print(params_adds)
 
 auc_frame = []
-for param_add, hyperparam in zip(params_adds, Fine_tune('num_filter', [(4*2**(i), 8*2**(i), 16*2**(i)) for i in range(1+3)[::-1] if 4*2**(i) != 16])):
+for param_add, hyperparam in zip(params_adds, Fine_tune('num_filter', [(4*2**(i), 8*2**(i), 16*2**(i)) for i in range(1+3)[::-1] ])):
 
     print('Now working on:')
-    test(Fine_tune('num_filter', [(4*2**(i), 8*2**(i), 16*2**(i)) for i in range(1+3)[::-1] if 4*2**(i) != 16]))
+    # test(Fine_tune('num_filter', [(4*2**(i), 8*2**(i), 16*2**(i)) for i in range(1+3)[::-1] if 4*2**(i) != 16]))
+    print(hyperparam)
+    print(param_add)
     param = nd.load(pretrained_add + param_add)
 
     hidden_dim = hyperparam['hidden_dim']
@@ -145,7 +147,7 @@ for param_add, hyperparam in zip(params_adds, Fine_tune('num_filter', [(4*2**(i)
         auc_var_list = []
         i = 0
         while True:
-            if i == 4: break
+            if i == 2: break
             else: pass
             try:
                 prob, label , _= Solver.predict_nd()
@@ -167,6 +169,6 @@ np.save('./AUC_%s' %MODEL, np.array(auc_frame))
 
 # floyd run --gpu \
 # --data wctttty/datasets/gw_waveform/1:waveform \
-# --data wctttty/projects/python4gw/129:pretrained \
-# -m "AUC_ft_num_filter" \
+# --data wctttty/projects/python4gw/196:pretrained \
+# -m "AUC_new_ft_num_filter" \
 # "bash setup_floydhub.sh && python run_eval_ft_num_filter.py"

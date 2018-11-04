@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地
 
 from utils import *
 from data_utils import *
-from models.solver_cnn import *
+from models.solver_cnn_ import *
 from models.ConvNet import *
 
 import numpy as np
@@ -81,8 +81,8 @@ train_masses = [masses for masses in data.index if float(masses.split('|')[0]) %
 train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
-MODEL = 'OURs_ft_pool_params'
-pretrained_add = '/floyd/input/pretrained/pretrained_models/%s/' %MODEL
+MODEL = 'OURs_new_ft_pool_params'
+pretrained_add = '/floyd/input/pretrained/pretrained_models/OURs_fine_tune/%s/' %MODEL
 os.system('ls -a %s | grep best > test.txt' %pretrained_add)
 params_adds = pd.read_csv('./test.txt', header=None)
 os.system('rm test.txt')
@@ -91,9 +91,9 @@ params_adds = params_adds.sort_values('pool_params', ascending=True)[0].values.t
 
 print(params_adds)
 
-values = [4*2**i for i in range(4)[::-1]] + [4*2**i for i in range(4)[::-1] if 4*2**i != 16]
+values = [4*2**i for i in range(4)[::-1]] + [4*2**i for i in range(4)[::-1] ]
 values = [((1,i), (1,i), (1,i)) for i in values]
-pool_type_tuple = ('max',)*4+('avg',)*3
+pool_type_tuple = ('max',)*4+('avg',)*4
 
 auc_frame = []
 for param_add, hyperparam in zip(params_adds, Fine_tune('pool_type_kernel', [i for i in zip(pool_type_tuple, values)])):
@@ -147,7 +147,7 @@ for param_add, hyperparam in zip(params_adds, Fine_tune('pool_type_kernel', [i f
         auc_var_list = []
         i = 0
         while True:
-            if i == 4: break
+            if i == 2: break
             else: pass
             try:
                 prob, label , _= Solver.predict_nd()
@@ -166,10 +166,10 @@ for param_add, hyperparam in zip(params_adds, Fine_tune('pool_type_kernel', [i f
     auc_frame.append(auc_list)
 os.system('rm -rf ./*')
 np.save('./AUC_%s' %MODEL, np.array(auc_frame))
-test(Fine_tune('pool_type_kernel', [i for i in zip(pool_type_tuple, values)]))
+# test(Fine_tune('pool_type_kernel', [i for i in zip(pool_type_tuple, values)]))
 
 # floyd run --gpu \
 # --data wctttty/datasets/gw_waveform/1:waveform \
-# --data wctttty/projects/python4gw/123:pretrained \
-# -m "AUC_ft_pool_param" \
+# --data wctttty/projects/python4gw/198:pretrained \
+# -m "AUC_new_ft_pool_params" \
 # "bash setup_floydhub.sh && python run_eval_ft_pool_param.py"

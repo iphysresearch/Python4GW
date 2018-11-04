@@ -23,8 +23,8 @@ print()
 
 
 ### Load Data ####
-# GW_address = '/floyd/input/waveform/'
-GW_address = './data/'
+GW_address = '/floyd/input/waveform/'
+# GW_address = './data/'
 data = pd.DataFrame(np.load(GW_address+'GW_H1.npy'), index=np.load(GW_address+'GW_H1_index.npy'))
 print('Raw data: ', data.shape)
 peak_samppoint = data.values.argmax(axis=1)
@@ -55,10 +55,10 @@ test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 # params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_8_best_params_epoch@16.pkl')
 # for snr in list([0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
 # params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_3_best_params_epoch@3.pkl')
-SNR_list = [1, 0.6, 0.4, 0.3, 0.2, 0.1]
+SNR_list = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2,0.1]
 hidden_dim_list = [256, 128, 64, 32, 16]
 
-save_address = 'OURs_ft_hidden_dim'
+save_address = 'OURs_new_ft_hidden_dim'
 for hidden_dim in hidden_dim_list:
     print('hidden_dim:' , hidden_dim)
     i = 0
@@ -92,8 +92,8 @@ for hidden_dim in hidden_dim_list:
                         num_epoch=40, rand_times = 2,
                         batch_size = 256, stacking_size = 512,
                         lr_rate=0.0003,
-                        save_checkpoints_address = './pretrained_models/%s/' %save_address
-                        ,checkpoint_name = 'hidden_dim_%s' %int(hidden_dim),floydhub_verbose =False,)
+                        save_checkpoints_address = './pretrained_models/OURs_fine_tune/%s/' %save_address
+                        ,checkpoint_name = 'hidden_dim_%s' %int(hidden_dim),floydhub_verbose =True,)
 
         try:
             Solver.Training()
@@ -107,5 +107,5 @@ for hidden_dim in hidden_dim_list:
 
 # floyd run --gpu \
 # --data wctttty/datasets/gw_waveform/1:waveform \
-# -m "OURs_ft_hidden_dim" \
+# -m "OURs_new_ft_hidden_dim" \
 # "bash setup_floydhub.sh && python run_ft_hidden_dim.py"                

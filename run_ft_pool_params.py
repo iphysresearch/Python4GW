@@ -56,16 +56,17 @@ test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 # params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_8_best_params_epoch@16.pkl')
 # for snr in list([0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
 # params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_3_best_params_epoch@3.pkl')
-SNR_list = [1, 0.6, 0.4, 0.3, 0.2]
-pool_type_list = ['max','max','max','max','avg','avg','avg']
+SNR_list = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2,0.1]
+pool_type_list = ['max','max','max','max','avg','avg','avg','avg']
 kernel_list = [((1,32), (1,32), (1,32),) ,
                ((1,16), (1,16), (1,16),),
                ((1,8), (1,8), (1,8),) ,
                ((1,4), (1,4), (1,4),) ,
                ((1,32), (1,32), (1,32),),
+               ((1,16), (1,16), (1,16),),
                ((1,8), (1,8), (1,8),),
                ((1,4), (1,4), (1,4),) ]
-save_address = 'OURs_ft_pool_params'
+save_address = 'OURs_new_ft_pool_params'
 for index, (pool_type, kernel) in enumerate(zip(pool_type_list,kernel_list)):
     print('pool_type:' , pool_type)
     print('kernel:' , kernel)
@@ -100,7 +101,7 @@ for index, (pool_type, kernel) in enumerate(zip(pool_type_list,kernel_list)):
                         num_epoch=40, rand_times = 2,
                         batch_size = 256, stacking_size = 256,
                         lr_rate=0.0003
-                        ,save_checkpoints_address = './pretrained_models/%s/' %save_address
+                        ,save_checkpoints_address = './pretrained_models/OURs_fine_tune/%s/' %save_address
                         ,checkpoint_name = 'pool_params_%s' %int(index+1),floydhub_verbose =True,)
 
         try:
@@ -114,5 +115,5 @@ for index, (pool_type, kernel) in enumerate(zip(pool_type_list,kernel_list)):
 
 # floyd run --gpu \
 # --data wctttty/datasets/gw_waveform/1:waveform \
-# -m "OURs_ft_pool_params" \
+# -m "OURs_new_ft_pool_params" \
 # "bash setup_floydhub.sh && python run_ft_pool_params.py"
