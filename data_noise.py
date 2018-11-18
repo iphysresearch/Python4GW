@@ -314,7 +314,7 @@ def pre_fir(targetSens = 'ZERO_DET_high_P.txt', fLow=9, fHigh=9000, fs = 8192, f
     Input:
     - targetSens: str. File containing target sensitivity curve (first column is frequency and
                   second column is square root of PSD).
-    - fLow: Select low pass. Default as 20 Hz.
+    - fLow: Select low pass. Default as 9 Hz.
     - fHigh: Select high pass. Default as 9000 Hz.
     - fs: sample of rate. Default as 8192 Hz
     - filterOrdr: FIR filter order
@@ -322,6 +322,7 @@ def pre_fir(targetSens = 'ZERO_DET_high_P.txt', fLow=9, fHigh=9000, fs = 8192, f
     Output:
     - b: filter coefficients. Default as an np.array in shape of (101,)
     """
+    print('fLow = %s, fHigh = %s, fs = %s, filtOrdr = %s' %(fLow, fHigh, fs, filtOrdr))
     targetSens = np.loadtxt(targetSens)
     targetSens[(targetSens[:,0] <= fLow) + (targetSens[:,0] >=fHigh), 1] = 0
 

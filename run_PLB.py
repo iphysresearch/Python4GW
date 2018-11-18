@@ -9,7 +9,8 @@ sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地
 
 from utils import *
 from data_utils import *
-from models.solver_cnn import *
+# from models.solver_cnn import *
+from models.solver_cnn_ import *
 from models.ConvNet import *
 
 import numpy as np
@@ -49,6 +50,16 @@ train_masses = [masses for masses in data.index if float(masses.split('|')[0]) %
 train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
+b = nd.array(pre_fir().reshape((-1,1)), ctx=ctx)
+
+mx.random.seed(1)  # fix the random seed
+stacking_size = 256
+rand_times = 5
+num_noise = stacking_size * rand_times * 2 
+pp = pre_fftfilt(b, shape = (num_noise, train_data.shape[-1]), nfft=None)
+localnoise = GenNoise_matlab_nd(shape = (num_noise, train_data.shape[-1]), params = pp)
+
+
 ## Training
 params_tl  = None
 # for snr in list([1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
@@ -81,9 +92,9 @@ while True:
                     train = train_data,
                     test = test_data,
                     SNR = snr,   params = params_tl,
-                    num_epoch=30,
-                    batch_size = 256
-                    ,  lr_rate=0.0001
+                    num_epoch=30, rand_times = rand_times,
+                    batch_size = 256, stacking_size = stacking_size,
+                    lr_rate=0.0001, localnoise = localnoise
                     ,save_checkpoints_address = './pretrained_models/PLB/'
                     ,checkpoint_name = 'snr_%s' %int(snr*100),floydhub_verbose =True, )
 
@@ -96,3 +107,10 @@ while True:
 
     params_tl = Solver.best_params
     i += 1
+
+
+
+# floyd run --gpu \
+# --data wctttty/datasets/gw_waveform/1:waveform \
+# -m "PLB_old" \
+# "bash setup_floydhub.sh && python run_PLB.py"    

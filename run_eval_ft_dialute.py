@@ -93,7 +93,7 @@ test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
 MODEL = 'OURs_new_ft_dialute'
 pretrained_add = '/floyd/input/pretrained/pretrained_models/OURs_fine_tune/%s/' %MODEL
-# pretrained_add = './pretrained_models/OURs_finetune/'
+# pretrained_add = './pretrained_models/OURs_finetune/%s/' %MODEL
 os.system('ls -a %s | grep best > test.txt' %(pretrained_add))
 params_adds = pd.read_csv('./test.txt', header=None)
 os.system('rm test.txt')
@@ -103,11 +103,11 @@ params_adds = params_adds.sort_values('dialute', ascending=False)[0].values.toli
 print(params_adds)
 
 auc_frame = []
-for param_add, hyperparam in zip(params_adds, Fine_tune('dialute', [6,5,4,3,2,1])):
+for param_add, hyperparam in zip(params_adds, Fine_tune('dialute', [5,4,3,2,1])):
 # for param_add, hyperparam in zip(params_adds, Fine_tune('dialute', [4,5,6])):    
 
     print('Now working on:')
-    test(Fine_tune('dialute', [6,5,4,3,2,1]))
+    test(Fine_tune('dialute', [5,4,3,2,1]))
     param = nd.load(pretrained_add + param_add)
 
     hidden_dim = hyperparam['hidden_dim']

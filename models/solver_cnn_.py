@@ -20,12 +20,12 @@ from optim import *
 import mxnet as mx
 from mxnet import ndarray as nd
 from mxnet import autograd, gluon
-from multiprocessing import cpu_count
-CPU_COUNT = cpu_count()
+# from multiprocessing import cpu_count
+# CPU_COUNT = cpu_count()
 
 import random
 
-# mx.random.seed(1)
+mx.random.seed(1)
 # random.seed(1)
 
 
@@ -88,9 +88,9 @@ class Solver_nd(object):
         
         # Create mini-batches of GW waveforms for training & testing  写在初始化里
         train_wf = gluon.data.ArrayDataset(self.train_ori)            
-        self.train_wf_loader = gluon.data.DataLoader(train_wf, batch_size=self.stacking_size, shuffle=True, last_batch='keep')
-        test_wf = gluon.data.ArrayDataset(self.test_ori)            
-        self.test_wf_loader = gluon.data.DataLoader(test_wf, batch_size=self.stacking_size, shuffle=True, last_batch='keep')
+        self.train_wf_loader = gluon.data.DataLoader(train_wf, batch_size=self.stacking_size, shuffle=False, last_batch='keep')
+        test_wf = gluon.data.ArrayDataset(self.test_ori)
+        self.test_wf_loader = gluon.data.DataLoader(test_wf, batch_size=self.stacking_size, shuffle=False, last_batch='keep')
 
 
 #         if not hasattr(optim, self.update_rule):
@@ -218,8 +218,9 @@ class Solver_nd(object):
         if ctx == mx.gpu():
             if self.localnoise is not None:
                 print('local noise dataset!')
-                noise = nd.random.shuffle(self.localnoise).as_in_context(mx.gpu())
-                return nd.slice_axis(data=noise, axis = 0, begin = 0, end = self.noiseAll_size)
+                # noise = nd.random.shuffle(self.localnoise).as_in_context(mx.gpu())
+                # noise = self.localnoise.as_in_context(mx.gpu())
+                return nd.slice_axis(data=self.localnoise.as_in_context(mx.gpu()), axis = 0, begin = 0, end = self.noiseAll_size)
             noise = GenNoise_matlab_nd(shape = (self.noiseAll_size, self.train.shape[-1]), params = self.pp)
         else:
             raise
@@ -264,6 +265,8 @@ class Solver_nd(object):
             for epoch in range(1, self.num_epoch + 1):
                 self.epoch = epoch
                 self.lr_rate = lr_decay(self.lr_rate, epoch, self.lr_decay)
+
+                mx.random.seed(2)
 
                 # Stacking all the waveform
                 for _, (self.train, self.test) in enumerate(zip(self.train_wf_loader, self.test_wf_loader)):
@@ -433,6 +436,7 @@ class Solver_nd(object):
     def predict_nd(self):
         prob_list = []
         label_list = []
+        mx.random.seed(22) 
         for _, (self.train, self.test) in enumerate(zip(self.train_wf_loader, self.test_wf_loader)):
             self._random_data()
             self._gen_yshape()

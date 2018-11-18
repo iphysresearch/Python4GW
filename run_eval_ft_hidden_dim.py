@@ -85,7 +85,7 @@ test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
 MODEL = 'OURs_new_ft_hidden_dim'
 pretrained_add = '/floyd/input/pretrained/pretrained_models/OURs_fine_tune/%s/' %MODEL
-# pretrained_add = './pretrained_models/%s/' %MODEL
+# pretrained_add = './pretrained_models/OURs_fine_tune/%s/' %MODEL
 os.system('ls -a %s | grep best > test.txt' %(pretrained_add))
 params_adds = pd.read_csv('./test.txt', header=None)
 os.system('rm test.txt')

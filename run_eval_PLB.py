@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(''))   # 把当前目录设为引用模块的地
 
 from utils import *
 from data_utils import *
-from models.solver_cnn import *
+from models.solver_cnn_ import *
 from models.ConvNet import *
 
 import numpy as np
@@ -104,7 +104,7 @@ for param_add in params_adds:
         fpr_var_list, tpr_var_list = [], []
         i = 0
         while True:
-            if i == 5: break
+            if i == 2: break
             else: pass
             try:
                 prob, label , _= Solver.predict_nd()
@@ -133,6 +133,6 @@ np.save('./tpr_%s' %MODEL, np.array(tpr_frame))
 
 # floyd run --gpu \
 # --data wctttty/datasets/gw_waveform/1:waveform \
-# --data wctttty/projects/python4gw/155:pretrained \
-# -m "AUC_PLB_new" \
+# --data wctttty/projects/python4gw/225:pretrained \
+# -m "AUC_PLB_old" \
 # "bash setup_floydhub.sh && python run_eval_PLB.py"

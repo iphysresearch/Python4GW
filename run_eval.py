@@ -44,6 +44,17 @@ train_masses = [masses for masses in data.index if float(masses.split('|')[0]) %
 train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
+b = nd.array(pre_fir().reshape((-1,1)), ctx=ctx)
+
+mx.random.seed(11)  # fix the random seed
+stacking_size = 256
+rand_times = 5
+num_noise = stacking_size * rand_times * 2 +2
+pp = pre_fftfilt(b, shape = (num_noise, train_data.shape[-1]), nfft=None)
+localnoise = GenNoise_matlab_nd(shape = (num_noise, train_data.shape[-1]), params = pp)
+
+
+
 opts, args = getopt.getopt(sys.argv[1:], "hfsto")
 for op, value in opts:
     if op == '-f':
@@ -119,7 +130,7 @@ for param_add in params_adds:
         fpr_var_list, tpr_var_list = [], []
         i = 0
         while True:
-            if i == 5: break
+            if i == 2: break
             else: pass
             try:
                 prob, label , _= Solver.predict_nd()
@@ -146,7 +157,8 @@ for param_add in params_adds:
 # np.save('./AUC_data/AUC_%s' %MODEL, np.array(auc_frame))
 # np.save('./AUC_data/fpr_%s' %MODEL, np.array(fpr_frame))
 # np.save('./AUC_data/tpr_%s' %MODEL, np.array(tpr_frame))
-
+os.system('rm -rf ./*')
+MODEL = 'old'
 np.save('./AUC_%s' %MODEL, np.array(auc_frame))
 np.save('./fpr_%s' %MODEL, np.array(fpr_frame))
 np.save('./tpr_%s' %MODEL, np.array(tpr_frame))
@@ -155,6 +167,6 @@ np.save('./tpr_%s' %MODEL, np.array(tpr_frame))
 
 # floyd run --gpu \
 # --data wctttty/datasets/gw_waveform/1:waveform \
-# --data wctttty/projects/python4gw/156:pretrained \
-# -m "AUC_OURs_finitnoise" \
+# --data wctttty/projects/python4gw/228:pretrained \
+# -m "AUC_OURs_old" \
 # "bash setup_floydhub.sh && python run_eval.py"

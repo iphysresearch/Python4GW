@@ -50,6 +50,17 @@ train_masses = [masses for masses in data.index if float(masses.split('|')[0]) %
 train_data = nd.array(data.loc[train_masses], ctx=mx.cpu())
 test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 
+
+b = nd.array(pre_fir().reshape((-1,1)), ctx=ctx)
+
+mx.random.seed(1)  # fix the random seed
+stacking_size = 256
+rand_times = 5
+num_noise = stacking_size * rand_times * 2
+pp = pre_fftfilt(b, shape = (num_noise, train_data.shape[-1]), nfft=None)
+localnoise = GenNoise_matlab_nd(shape = (num_noise, train_data.shape[-1]), params = pp)
+
+
 ## Training
 
 # for snr in list([1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
@@ -58,7 +69,7 @@ test_data = nd.array(data.loc[test_masses], ctx=mx.cpu())
 # for snr in list([0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]):
 # params_tl  = nd.load('/floyd/input/pretrained/OURs/snr_3_best_params_epoch@3.pkl')
 SNR_list = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2,0.1]
-dialute_list = [1, 2, 3, 4, 5, 6]
+dialute_list = [1, 2, 3, 4, 5]
 save_address = 'OURs_new_ft_dialute'
 for dialute in dialute_list:
     print('dialute:' , dialute)
@@ -90,10 +101,10 @@ for dialute in dialute_list:
                         train = train_data,
                         test = test_data,
                         SNR = snr,   params = params_tl,
-                        num_epoch=40, rand_times = 2,
-                        batch_size = 256, stacking_size = 512,
-                        lr_rate=0.0003,
-                        save_checkpoints_address = './pretrained_models/OURs_fine_tune/%s/' %save_address
+                        num_epoch=30, rand_times = rand_times,
+                        batch_size = 256, stacking_size = stacking_size,
+                        lr_rate=0.0001, localnoise = localnoise
+                        ,save_checkpoints_address = './pretrained_models/OURs_fine_tune/%s/' %save_address
                         ,checkpoint_name = 'dialute_%s' %int(dialute),floydhub_verbose =True, )
 
         try:
@@ -107,5 +118,5 @@ for dialute in dialute_list:
 
 # floyd run --gpu \
 # --data wctttty/datasets/gw_waveform/1:waveform \
-# -m "OURs_new_ft_dialute" \
-# "bash setup_floydhub.sh && python run_ft_dialute.py"                
+# -m "OURs_old_ft_dialute" \
+# "bash setup_floydhub.sh && python run_ft_dialute.py" 
