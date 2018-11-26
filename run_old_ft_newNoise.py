@@ -12,6 +12,7 @@ from scipy import signal
 import scipy
 import math
 from sklearn.metrics import roc_curve, auc
+from sklearn import metrics
 
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
@@ -75,11 +76,428 @@ def init_params(num_fc, num_outputs, sl, nf):
         sqrs.append(param.zeros_like())        
     return params, vs, sqrs
 
+def init_params_2MLP(num_fc, num_outputs, sl, nf):
+    #######################
+    #  Set the scale for weight initialization and choose
+    #  the number of hidden units in the fully-connected layer
+    #######################
+    weight_scale = .01
+
+    W1 = nd.random_normal(loc=0, scale=weight_scale, shape=(int(16*nf), 1, 1, 16), ctx=ctx )
+    W2 = nd.random_normal(loc=0, scale=weight_scale, shape=(int(32*nf), int(16*nf), 1, 8), ctx=ctx )
+    W3 = nd.random_normal(loc=0, scale=weight_scale, shape=(int(64*nf), int(32*nf), 1, 8), ctx=ctx )
+    W4 = nd.random_normal(loc=0, scale=weight_scale, shape=(sl, num_fc), ctx=ctx )
+    W5 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_fc), ctx=ctx )    
+    W6 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_outputs), ctx=ctx )
+    b1 = nd.random_normal(shape=int(16*nf), scale=weight_scale, ctx=ctx)
+    b2 = nd.random_normal(shape=int(32*nf), scale=weight_scale, ctx=ctx)
+    b3 = nd.random_normal(shape=int(64*nf), scale=weight_scale, ctx=ctx)
+    b4 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)
+    b5 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)    
+    b6 = nd.random_normal(shape=num_outputs, scale=weight_scale, ctx=ctx)
+
+    params = [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6]
+
+    vs = []
+    sqrs = []    
+    
+    # And assign space for gradients
+    for param in params:
+        param.attach_grad()
+        vs.append(param.zeros_like())
+        sqrs.append(param.zeros_like())        
+    return params, vs, sqrs
+
+
+# CNN model
+def net_2MLP(X, params, drop_prob, debug=False, pool_type='avg',pool_size = 16,pool_stride=2, act_type = 'relu', dilate_size = 1, nf=1):
+    [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6] = params
+    ########################
+    #  Define the computation of the first convolutional layer
+    ########################
+    h1_conv = nd.Convolution(data=X, weight=W1, bias=b1, kernel=(1,16), num_filter=int(16*nf), stride=(1,1),dilate=(1,dilate_size))
+    h1_activation = activation(h1_conv, act_type = act_type)
+    h1 = nd.Pooling(data=h1_activation, pool_type=pool_type, kernel=(1,pool_size), stride=(1,pool_stride))
+    if debug:
+        print("h1 shape: %s" % (np.array(h1.shape)))
+
+    ########################
+    #  Define the computation of the second convolutional layer
+    ########################
+    h2_conv = nd.Convolution(data=h1, weight=W2, bias=b2, kernel=(1,8), num_filter=int(32*nf), stride=(1,1),dilate=(1,dilate_size))
+    h2_activation = activation(h2_conv, act_type = act_type)
+    h2 = nd.Pooling(data=h2_activation, pool_type=pool_type, kernel=(1,pool_size), stride=(1,pool_stride))
+    if debug:
+        print("h2 shape: %s" % (np.array(h2.shape)))
+        
+    ########################
+    #  Define the computation of the third convolutional layer
+    ########################
+    h3_conv = nd.Convolution(data=h2, weight=W3, bias=b3, kernel=(1,8), num_filter=int(64*nf), stride=(1,1),dilate=(1,dilate_size))
+    h3_activation = activation(h3_conv, act_type = act_type)
+    h3 = nd.Pooling(data=h3_activation, pool_type=pool_type, kernel=(1,pool_size), stride=(1,pool_stride))
+    if debug:
+        print("h3 shape: %s" % (np.array(h3.shape)))
+
+    ########################
+    #  Flattening h3 so that we can feed it into a fully-connected layer
+    ########################
+    h4 = nd.flatten(h3)
+    if debug:
+        print("Flat h4 shape: %s" % (np.array(h4.shape)))
+
+    ########################
+    #  Define the computation of the 4th (fully-connected) layer
+    ########################
+    h5_linear = nd.dot(h4, W4) + b4
+    h5 = activation(h5_linear, act_type = act_type)
+    if debug:
+        print("h5 shape: %s" % (np.array(h5.shape)))
+
+    ########################
+    #  Define the computation of the 5th (fully-connected) layer
+    ########################
+    h6_linear = nd.dot(h5, W5) + b5
+    h6 = activation(h6_linear, act_type = act_type)
+    if debug:
+        print("h6 shape: %s" % (np.array(h6.shape)))
+
+    ########################
+    #  Define the computation of the output layer
+    ########################
+    yhat_linear = nd.dot(h6, W6) + b6
+    if debug:
+        print("yhat_linear shape: %s" % (np.array(yhat_linear.shape)))
+    
+    interlayer = [h1, h2, h3, h4, h5, h6]
+    
+    return yhat_linear, interlayer
+
+def init_params_3MLP(num_fc, num_outputs, sl, nf):
+    #######################
+    #  Set the scale for weight initialization and choose
+    #  the number of hidden units in the fully-connected layer
+    #######################
+    weight_scale = .01
+
+    W1 = nd.random_normal(loc=0, scale=weight_scale, shape=(int(16*nf), 1, 1, 16), ctx=ctx )
+    W2 = nd.random_normal(loc=0, scale=weight_scale, shape=(int(32*nf), int(16*nf), 1, 8), ctx=ctx )
+    W3 = nd.random_normal(loc=0, scale=weight_scale, shape=(int(64*nf), int(32*nf), 1, 8), ctx=ctx )
+    W4 = nd.random_normal(loc=0, scale=weight_scale, shape=(sl, num_fc), ctx=ctx )
+    W5 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_fc), ctx=ctx )    
+    W6 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_fc), ctx=ctx )        
+    W7 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_outputs), ctx=ctx )
+    b1 = nd.random_normal(shape=int(16*nf), scale=weight_scale, ctx=ctx)
+    b2 = nd.random_normal(shape=int(32*nf), scale=weight_scale, ctx=ctx)
+    b3 = nd.random_normal(shape=int(64*nf), scale=weight_scale, ctx=ctx)
+    b4 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)
+    b5 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)    
+    b6 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)        
+    b7 = nd.random_normal(shape=num_outputs, scale=weight_scale, ctx=ctx)
+
+    params = [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6, W7, b7]
+
+    vs = []
+    sqrs = []    
+    
+    # And assign space for gradients
+    for param in params:
+        param.attach_grad()
+        vs.append(param.zeros_like())
+        sqrs.append(param.zeros_like())        
+    return params, vs, sqrs
+
+
+# CNN model
+def net_3MLP(X, params, drop_prob, debug=False, pool_type='avg',pool_size = 16,pool_stride=2, act_type = 'relu', dilate_size = 1, nf=1):
+    [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6, W7, b7] = params
+    ########################
+    #  Define the computation of the first convolutional layer
+    ########################
+    h1_conv = nd.Convolution(data=X, weight=W1, bias=b1, kernel=(1,16), num_filter=int(16*nf), stride=(1,1),dilate=(1,dilate_size))
+    h1_activation = activation(h1_conv, act_type = act_type)
+    h1 = nd.Pooling(data=h1_activation, pool_type=pool_type, kernel=(1,pool_size), stride=(1,pool_stride))
+    if debug:
+        print("h1 shape: %s" % (np.array(h1.shape)))
+
+    ########################
+    #  Define the computation of the second convolutional layer
+    ########################
+    h2_conv = nd.Convolution(data=h1, weight=W2, bias=b2, kernel=(1,8), num_filter=int(32*nf), stride=(1,1),dilate=(1,dilate_size))
+    h2_activation = activation(h2_conv, act_type = act_type)
+    h2 = nd.Pooling(data=h2_activation, pool_type=pool_type, kernel=(1,pool_size), stride=(1,pool_stride))
+    if debug:
+        print("h2 shape: %s" % (np.array(h2.shape)))
+        
+    ########################
+    #  Define the computation of the third convolutional layer
+    ########################
+    h3_conv = nd.Convolution(data=h2, weight=W3, bias=b3, kernel=(1,8), num_filter=int(64*nf), stride=(1,1),dilate=(1,dilate_size))
+    h3_activation = activation(h3_conv, act_type = act_type)
+    h3 = nd.Pooling(data=h3_activation, pool_type=pool_type, kernel=(1,pool_size), stride=(1,pool_stride))
+    if debug:
+        print("h3 shape: %s" % (np.array(h3.shape)))
+
+    ########################
+    #  Flattening h3 so that we can feed it into a fully-connected layer
+    ########################
+    h4 = nd.flatten(h3)
+    if debug:
+        print("Flat h4 shape: %s" % (np.array(h4.shape)))
+
+    ########################
+    #  Define the computation of the 4th (fully-connected) layer
+    ########################
+    h5_linear = nd.dot(h4, W4) + b4
+    h5 = activation(h5_linear, act_type = act_type)
+    if debug:
+        print("h5 shape: %s" % (np.array(h5.shape)))
+
+    ########################
+    #  Define the computation of the 5th (fully-connected) layer
+    ########################
+    h6_linear = nd.dot(h5, W5) + b5
+    h6 = activation(h6_linear, act_type = act_type)
+    if debug:
+        print("h6 shape: %s" % (np.array(h6.shape)))
+        
+    ########################
+    #  Define the computation of the 6th (fully-connected) layer
+    ########################
+    h7_linear = nd.dot(h6, W6) + b6
+    h7 = activation(h7_linear, act_type = act_type)
+    if debug:
+        print("h7 shape: %s" % (np.array(h7.shape)))        
+
+    ########################
+    #  Define the computation of the output layer
+    ########################
+    yhat_linear = nd.dot(h7, W7) + b7
+    if debug:
+        print("yhat_linear shape: %s" % (np.array(yhat_linear.shape)))
+    
+    interlayer = [h1, h2, h3, h4, h5, h6, h7]
+    
+    return yhat_linear, interlayer
+
+
 import sys
 sys.path.append('..')
 # import gluonbook as gb
 from mxnet import autograd, gluon, nd
 from mxnet.gluon import loss as gloss
+
+def init_params1CONV(num_fc, num_outputs, nf, sl=31424):
+    #######################
+    #  Set the scale for weight initialization and choose
+    #  the number of hidden units in the fully-connected layer
+    #######################
+    weight_scale = .01
+
+    W1 = nd.random_normal(loc=0, scale=weight_scale, shape=(int(16*nf), 1, 1, 16), ctx=ctx )
+    W2 = nd.random_normal(loc=0, scale=weight_scale, shape=(int(32*nf), int(16*nf), 1, 8), ctx=ctx )
+    W3 = nd.random_normal(loc=0, scale=weight_scale, shape=(int(64*nf), int(32*nf), 1, 8), ctx=ctx )
+    W4 = nd.random_normal(loc=0, scale=weight_scale, shape=(int(128*nf), int(64*nf), 1, 8), ctx=ctx )
+    W5 = nd.random_normal(loc=0, scale=weight_scale, shape=(sl, num_fc), ctx=ctx )
+    W6 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_outputs), ctx=ctx )
+    b1 = nd.random_normal(shape=int(16*nf), scale=weight_scale, ctx=ctx)
+    b2 = nd.random_normal(shape=int(32*nf), scale=weight_scale, ctx=ctx)
+    b3 = nd.random_normal(shape=int(64*nf), scale=weight_scale, ctx=ctx)
+    b4 = nd.random_normal(shape=int(128*nf), scale=weight_scale, ctx=ctx)    
+    b5 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)
+    b6 = nd.random_normal(shape=num_outputs, scale=weight_scale, ctx=ctx)
+
+    params = [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6]
+
+    vs = []
+    sqrs = []    
+    
+    # And assign space for gradients
+    for param in params:
+        param.attach_grad()
+        vs.append(param.zeros_like())
+        sqrs.append(param.zeros_like())        
+    return params, vs, sqrs
+
+
+# CNN model
+def net1CONV(X, params, drop_prob, debug=False, pool_type='avg',pool_size = 16,pool_stride=2, act_type = 'relu', dilate_size = 1, nf=1):
+    [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6] = params
+    ########################
+    #  Define the computation of the first convolutional layer
+    ########################
+    h1_conv = nd.Convolution(data=X, weight=W1, bias=b1, kernel=(1,16), num_filter=int(16*nf), stride=(1,1),dilate=(1,dilate_size))
+    h1_activation = activation(h1_conv, act_type = act_type)
+    h1 = nd.Pooling(data=h1_activation, pool_type=pool_type, kernel=(1,pool_size), stride=(1,pool_stride))
+    if debug:
+        print("h1 shape: %s" % (np.array(h1.shape)))
+
+    ########################
+    #  Define the computation of the second convolutional layer
+    ########################
+    h2_conv = nd.Convolution(data=h1, weight=W2, bias=b2, kernel=(1,8), num_filter=int(32*nf), stride=(1,1),dilate=(1,dilate_size))
+    h2_activation = activation(h2_conv, act_type = act_type)
+    h2 = nd.Pooling(data=h2_activation, pool_type=pool_type, kernel=(1,pool_size), stride=(1,pool_stride))
+    if debug:
+        print("h2 shape: %s" % (np.array(h2.shape)))
+        
+    ########################
+    #  Define the computation of the third convolutional layer
+    ########################
+    h3_conv = nd.Convolution(data=h2, weight=W3, bias=b3, kernel=(1,8), num_filter=int(64*nf), stride=(1,1),dilate=(1,dilate_size))
+    h3_activation = activation(h3_conv, act_type = act_type)
+    h3 = nd.Pooling(data=h3_activation, pool_type=pool_type, kernel=(1,pool_size), stride=(1,pool_stride))
+    if debug:
+        print("h3 shape: %s" % (np.array(h3.shape)))
+        
+    ########################
+    #  Define the computation of the 4th convolutional layer
+    ########################
+    h4_conv = nd.Convolution(data=h3, weight=W4, bias=b4, kernel=(1,8), num_filter=int(128*nf), stride=(1,1),dilate=(1,dilate_size))
+    h4_activation = activation(h4_conv, act_type = act_type)
+    h4 = nd.Pooling(data=h4_activation, pool_type=pool_type, kernel=(1,pool_size), stride=(1,pool_stride))
+    if debug:
+        print("h4 shape: %s" % (np.array(h4.shape)))
+        
+
+    ########################
+    #  Flattening h3 so that we can feed it into a fully-connected layer
+    ########################
+    h5 = nd.flatten(h4)
+    if debug:
+        print("Flat h5 shape: %s" % (np.array(h5.shape)))
+
+    ########################
+    #  Define the computation of the 4th (fully-connected) layer
+    ########################
+    h6_linear = nd.dot(h5, W5) + b5
+    h6 = activation(h6_linear, act_type = act_type)
+    if debug:
+        print("h6 shape: %s" % (np.array(h6.shape)))
+
+    ########################
+    #  Define the computation of the output layer
+    ########################
+    yhat_linear = nd.dot(h6, W6) + b6
+    if debug:
+        print("yhat_linear shape: %s" % (np.array(yhat_linear.shape)))
+    
+    interlayer = [h1, h2, h3, h4, h5, h6]
+    
+    return yhat_linear, interlayer
+
+def init_params2CONV(num_fc, num_outputs, nf, sl=15040):
+    #######################
+    #  Set the scale for weight initialization and choose
+    #  the number of hidden units in the fully-connected layer
+    #######################
+    weight_scale = .01
+
+    W1 = nd.random_normal(loc=0, scale=weight_scale, shape=(int(16*nf), 1, 1, 16), ctx=ctx )
+    W2 = nd.random_normal(loc=0, scale=weight_scale, shape=(int(32*nf), int(16*nf), 1, 8), ctx=ctx )
+    W3 = nd.random_normal(loc=0, scale=weight_scale, shape=(int(64*nf), int(32*nf), 1, 8), ctx=ctx )
+    W4 = nd.random_normal(loc=0, scale=weight_scale, shape=(int(128*nf), int(64*nf), 1, 8), ctx=ctx )
+    W5 = nd.random_normal(loc=0, scale=weight_scale, shape=(int(256*nf), int(128*nf), 1, 8), ctx=ctx )    
+    W6 = nd.random_normal(loc=0, scale=weight_scale, shape=(sl, num_fc), ctx=ctx )
+    W7 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_outputs), ctx=ctx )
+    b1 = nd.random_normal(shape=int(16*nf), scale=weight_scale, ctx=ctx)
+    b2 = nd.random_normal(shape=int(32*nf), scale=weight_scale, ctx=ctx)
+    b3 = nd.random_normal(shape=int(64*nf), scale=weight_scale, ctx=ctx)
+    b4 = nd.random_normal(shape=int(128*nf), scale=weight_scale, ctx=ctx)
+    b5 = nd.random_normal(shape=int(256*nf), scale=weight_scale, ctx=ctx)
+    b6 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)
+    b7 = nd.random_normal(shape=num_outputs, scale=weight_scale, ctx=ctx)
+
+    params = [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6, W7, b7]
+
+    vs = []
+    sqrs = []    
+    
+    # And assign space for gradients
+    for param in params:
+        param.attach_grad()
+        vs.append(param.zeros_like())
+        sqrs.append(param.zeros_like())        
+    return params, vs, sqrs
+
+
+# CNN model
+def net2CONV(X, params, drop_prob, debug=False, pool_type='avg',pool_size = 16,pool_stride=2, act_type = 'relu', dilate_size = 1, nf=1):
+    [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6, W7, b7] = params
+    ########################
+    #  Define the computation of the first convolutional layer
+    ########################
+    h1_conv = nd.Convolution(data=X, weight=W1, bias=b1, kernel=(1,16), num_filter=int(16*nf), stride=(1,1),dilate=(1,dilate_size))
+    h1_activation = activation(h1_conv, act_type = act_type)
+    h1 = nd.Pooling(data=h1_activation, pool_type=pool_type, kernel=(1,pool_size), stride=(1,pool_stride))
+    if debug:
+        print("h1 shape: %s" % (np.array(h1.shape)))
+
+    ########################
+    #  Define the computation of the second convolutional layer
+    ########################
+    h2_conv = nd.Convolution(data=h1, weight=W2, bias=b2, kernel=(1,8), num_filter=int(32*nf), stride=(1,1),dilate=(1,dilate_size))
+    h2_activation = activation(h2_conv, act_type = act_type)
+    h2 = nd.Pooling(data=h2_activation, pool_type=pool_type, kernel=(1,pool_size), stride=(1,pool_stride))
+    if debug:
+        print("h2 shape: %s" % (np.array(h2.shape)))
+        
+    ########################
+    #  Define the computation of the third convolutional layer
+    ########################
+    h3_conv = nd.Convolution(data=h2, weight=W3, bias=b3, kernel=(1,8), num_filter=int(64*nf), stride=(1,1),dilate=(1,dilate_size))
+    h3_activation = activation(h3_conv, act_type = act_type)
+    h3 = nd.Pooling(data=h3_activation, pool_type=pool_type, kernel=(1,pool_size), stride=(1,pool_stride))
+    if debug:
+        print("h3 shape: %s" % (np.array(h3.shape)))
+        
+    ########################
+    #  Define the computation of the 4th convolutional layer
+    ########################
+    h4_conv = nd.Convolution(data=h3, weight=W4, bias=b4, kernel=(1,8), num_filter=int(128*nf), stride=(1,1),dilate=(1,dilate_size))
+    h4_activation = activation(h4_conv, act_type = act_type)
+    h4 = nd.Pooling(data=h4_activation, pool_type=pool_type, kernel=(1,pool_size), stride=(1,pool_stride))
+    if debug:
+        print("h4 shape: %s" % (np.array(h4.shape)))
+        
+    ########################
+    #  Define the computation of the 5th convolutional layer
+    ########################
+    h5_conv = nd.Convolution(data=h4, weight=W5, bias=b5, kernel=(1,8), num_filter=int(256*nf), stride=(1,1),dilate=(1,dilate_size))
+    h5_activation = activation(h5_conv, act_type = act_type)
+    h5 = nd.Pooling(data=h5_activation, pool_type=pool_type, kernel=(1,pool_size), stride=(1,pool_stride))
+    if debug:
+        print("h5 shape: %s" % (np.array(h5.shape)))
+        
+
+    ########################
+    #  Flattening h3 so that we can feed it into a fully-connected layer
+    ########################
+    h6 = nd.flatten(h5)
+    if debug:
+        print("Flat h6 shape: %s" % (np.array(h6.shape)))
+
+    ########################
+    #  Define the computation of the 4th (fully-connected) layer
+    ########################
+    h7_linear = nd.dot(h6, W6) + b6
+    h7 = activation(h7_linear, act_type = act_type)
+    if debug:
+        print("h7 shape: %s" % (np.array(h7.shape)))
+
+    ########################
+    #  Define the computation of the output layer
+    ########################
+    yhat_linear = nd.dot(h7, W7) + b7
+    if debug:
+        print("yhat_linear shape: %s" % (np.array(yhat_linear.shape)))
+    
+    interlayer = [h1, h2, h3, h4, h5, h6, h7]
+    
+    return yhat_linear, interlayer
+
+
+
 
 def dropout(X, drop_prob):
     assert 0 <= drop_prob <= 1
@@ -220,9 +638,14 @@ def Train(train, test, Debug, batch_size, lr
           , smoothing_constant, num_fc, num_outputs, epochs, SNR
           , sl, pool_type ,pool_size ,pool_stride, drop_prob, act_type = 'relu' , dilate_size = 1, nf = 1
           , params_init=None, period=None, **kwargs):
-#     if kwargs:
-#         net = kwargs['net']
-#         init_params = kwargs['init_params']
+
+    if kwargs:
+        try:
+            net = kwargs['net']
+            init_params = kwargs['init_params']
+        except:
+            pass
+        train_type = kwargs['train_type']
 
     num_examples = train.shape[0]
     # 训练集数据类型转换
@@ -258,17 +681,74 @@ def Train(train, test, Debug, batch_size, lr
         print('Loading params...')
         params = params_init
 
-        [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5] = params
+        if train_type == '1MLP':
+            [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5] = params
 
-        # random fc layers
-        weight_scale = .01
-        W4 = nd.random_normal(loc=0, scale=weight_scale, shape=(sl, num_fc), ctx=ctx )
-        W5 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_outputs), ctx=ctx )
-        b4 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)
-        b5 = nd.random_normal(shape=num_outputs, scale=weight_scale, ctx=ctx)
+            # random fc layers
+            weight_scale = .01
+            W4 = nd.random_normal(loc=0, scale=weight_scale, shape=(sl, num_fc), ctx=ctx )
+            W5 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_outputs), ctx=ctx )
+            b4 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)
+            b5 = nd.random_normal(shape=num_outputs, scale=weight_scale, ctx=ctx)
 
-        params = [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5]
-        print('Random the FC-layers...')
+            params = [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5]
+            print('Random the FC-layers...')
+        elif train_type == '2MLP':
+            [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6] = params
+
+            # random fc layers
+            weight_scale = .01
+            W4 = nd.random_normal(loc=0, scale=weight_scale, shape=(sl, num_fc), ctx=ctx )
+            W5 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_fc), ctx=ctx )    
+            W6 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_outputs), ctx=ctx )
+            b4 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)
+            b5 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)    
+            b6 = nd.random_normal(shape=num_outputs, scale=weight_scale, ctx=ctx)
+
+            params = [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6]
+            print('Random the FC-layers...')
+        elif train_type == '3MLP':
+            [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6, W7, b7] = params
+
+            # random fc layers
+            weight_scale = .01
+            W4 = nd.random_normal(loc=0, scale=weight_scale, shape=(sl, num_fc), ctx=ctx )
+            W5 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_fc), ctx=ctx )    
+            W6 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_fc), ctx=ctx )        
+            W7 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_outputs), ctx=ctx )
+            b4 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)
+            b5 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)    
+            b6 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)        
+            b7 = nd.random_normal(shape=num_outputs, scale=weight_scale, ctx=ctx)
+
+            params = [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6, W7, b7]            
+            print('Random the FC-layers...')
+        elif train_type == '1CONV':
+            [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6]  = params
+
+            # random fc layers
+            weight_scale = .01
+            W5 = nd.random_normal(loc=0, scale=weight_scale, shape=(sl, num_fc), ctx=ctx )
+            W6 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_outputs), ctx=ctx )
+            b5 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)
+            b6 = nd.random_normal(shape=num_outputs, scale=weight_scale, ctx=ctx)
+
+            params = [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6]    
+        elif train_type == '2CONV':
+            [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6, W7, b7] = params
+
+            # random fc layers
+            weight_scale = .01
+            W6 = nd.random_normal(loc=0, scale=weight_scale, shape=(sl, num_fc), ctx=ctx )
+            W7 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_outputs), ctx=ctx )
+            b6 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)
+            b7 = nd.random_normal(shape=num_outputs, scale=weight_scale, ctx=ctx)
+
+            params = [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6, W7, b7]                    
+        else: 
+            print('You neet to specify the "train_type" as "1MLP"/"2MLP"/"3MLP"/"1CONV"/"2CONV"!')
+            raise
+
 
         vs = []
         sqrs = [] 
@@ -376,9 +856,92 @@ def Train(train, test, Debug, batch_size, lr
         print('{"metric": "Train_acc. for SNR=%s in epoches", "value": %.4f}' %(str(SNR), train_accuracy) )
         print('{"metric": "Test_acc. for SNR=%s in epoches", "value": %.4f}' %(str(SNR), test_accuracy) )
 
-        if (epoch <= 2) and (curr_loss <=0.00001) and (test_accuracy <=0.51):
+
+        if (epoch <= 4) and (curr_loss <=0.00001) and (test_accuracy <=0.51):
             lr /= 3
-            print('It"s happening! Retraining! Now, lr = %.6f' %lr)            
+            print('It"s happening! Retraining! Now, lr = %.6f' %lr)
+            # Initializate parameters
+            if params_init:
+                print('Loading params...')
+                params = params_init
+
+                if train_type == '1MLP':
+                    [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5] = params
+
+                    # random fc layers
+                    weight_scale = .01
+                    W4 = nd.random_normal(loc=0, scale=weight_scale, shape=(sl, num_fc), ctx=ctx )
+                    W5 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_outputs), ctx=ctx )
+                    b4 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)
+                    b5 = nd.random_normal(shape=num_outputs, scale=weight_scale, ctx=ctx)
+
+                    params = [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5]
+                    print('Random the FC-layers...')
+                elif train_type == '2MLP':
+                    [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6] = params
+
+                    # random fc layers
+                    weight_scale = .01
+                    W4 = nd.random_normal(loc=0, scale=weight_scale, shape=(sl, num_fc), ctx=ctx )
+                    W5 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_fc), ctx=ctx )    
+                    W6 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_outputs), ctx=ctx )
+                    b4 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)
+                    b5 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)    
+                    b6 = nd.random_normal(shape=num_outputs, scale=weight_scale, ctx=ctx)
+
+                    params = [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6]
+                    print('Random the FC-layers...')
+                elif train_type == '3MLP':
+                    [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6, W7, b7] = params
+
+                    # random fc layers
+                    weight_scale = .01
+                    W4 = nd.random_normal(loc=0, scale=weight_scale, shape=(sl, num_fc), ctx=ctx )
+                    W5 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_fc), ctx=ctx )    
+                    W6 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_fc), ctx=ctx )        
+                    W7 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_outputs), ctx=ctx )
+                    b4 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)
+                    b5 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)    
+                    b6 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)        
+                    b7 = nd.random_normal(shape=num_outputs, scale=weight_scale, ctx=ctx)
+
+                    params = [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6, W7, b7]            
+                    print('Random the FC-layers...')
+                elif train_type == '1CONV':
+                    [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6]  = params
+
+                    # random fc layers
+                    weight_scale = .01
+                    W5 = nd.random_normal(loc=0, scale=weight_scale, shape=(sl, num_fc), ctx=ctx )
+                    W6 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_outputs), ctx=ctx )
+                    b5 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)
+                    b6 = nd.random_normal(shape=num_outputs, scale=weight_scale, ctx=ctx)
+
+                    params = [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6]    
+                elif train_type == '2CONV':
+                    [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6, W7, b7] = params
+
+                    # random fc layers
+                    weight_scale = .01
+                    W6 = nd.random_normal(loc=0, scale=weight_scale, shape=(sl, num_fc), ctx=ctx )
+                    W7 = nd.random_normal(loc=0, scale=weight_scale, shape=(num_fc, num_outputs), ctx=ctx )
+                    b6 = nd.random_normal(shape=num_fc, scale=weight_scale, ctx=ctx)
+                    b7 = nd.random_normal(shape=num_outputs, scale=weight_scale, ctx=ctx)
+                    
+                    params = [W1, b1, W2, b2, W3, b3, W4, b4, W5, b5, W6, b6, W7, b7]                    
+                else: 
+                    print('You neet to specify the "train_type" as "1MLP"/"2MLP"/"3MLP"!')
+                    raise
+
+                vs = []
+                sqrs = [] 
+                for param in params:
+                    param.attach_grad()
+                    vs.append(param.zeros_like())
+                    sqrs.append(param.zeros_like())
+            else:
+                params, vs, sqrs = init_params(num_fc = num_fc, num_outputs = 2, sl=sl, nf=nf)
+                print('Initiate weights from random...')
             continue
 
         if (curr_loss <=0.00001) and (test_accuracy_history[-1] <=0.51) and (test_accuracy_history[-2] >=0.51):
@@ -521,9 +1084,12 @@ def creat_data(GW_train, noise1, SNR):
         sys.stdout.write("\r")
     return data
 
-
-
-
+model_name = 'OURs'
+SNR_list = [0.5, 0.45, 0.4, 0.35, 0.3, 0.25,0.2, 0.15, 0.1, 0.05, 0.01]
+for SNR_ in SNR_list:  # 不同的模型参数
+    auc_ = []
+    address = '/floyd/input/OURs/SNR%s_%s/' %(int(SNR_*100) ,model_name)
+    print(address+'%s' %(os.listdir(address)[0]))
 
 data_GW_train = pd.read_csv('../input/GW_data/GW_train_full.csv', index_col=0)
 print('The shape of data_GW_train: ' , data_GW_train.shape)
@@ -578,9 +1144,9 @@ SNR_list = [0.5, 0.45, 0.4, 0.35, 0.3, 0.25,0.2, 0.15, 0.1, 0.05, 0.01]
 # Fine_tune = 'elu'
 # Fine_tune_list = ['elu']
 
-Fine_tune = 'dilate'
-Fine_tune_list1 = [2,3]
-Fine_tune_list2 = [63808, 63360]
+# Fine_tune = 'dilate'
+# Fine_tune_list1 = [3]#[2,3]
+# Fine_tune_list2 = [63360]#[63808, 63360]
 
 
 # Fine_tune = 'pooling'
@@ -589,18 +1155,39 @@ Fine_tune_list2 = [63808, 63360]
 # Fine_tune_list3 = [63360, 64256, 64704, 64960, 63360, 64704, 64960]
 
 # Fine_tune = 'num_filter'
-# Fine_tune_list1 = [4, 2, 1/2]
-# Fine_tune_list2 = [257024, 128512, 32128]
+# Fine_tune_list1 = [1/2, 2]#[4, 2, 1/2]
+# Fine_tune_list2 = [32128,128512]#[257024, 128512, 32128]
 
-# Fine_tune = 'OURs'
-# Fine_tune_list = [0]
 
-# for ft in Fine_tune_list:
-for ft, ft1  in zip(Fine_tune_list1, Fine_tune_list2):
+# Fine_tune = 'num_MLP'
+# Fine_tune_list1 = ['2MLP', '3MLP']
+# Fine_tune_list2 = [net_2MLP, net_3MLP]
+# Fine_tune_list3 = [init_params_2MLP, init_params_3MLP]
+
+
+
+# Fine_tune = 'num_CONV'
+# Fine_tune_list1 = ['2CONV']#['1CONV', '2CONV']
+# Fine_tune_list2 = [net2CONV]#[net1CONV, net2CONV]
+# Fine_tune_list3 = [init_params2CONV]#[init_params1CONV, init_params2CONV]
+# Fine_tune_list4 = [60160]#[62848, 60160]
+
+Fine_tune = 'OURs'
+Fine_tune_list = [0]
+
+# Fine_tune = 'OURs_modified'
+# Fine_tune_list1 = [1, 2, 4]
+# Fine_tune_list2 = [63360, 126720, 253440]
+
+# Fine_tune = 'OURs_modified'
+# Fine_tune_list = ['relu', 'elu']
+
+for ft in Fine_tune_list:
+# for ft1, ft2 in zip(Fine_tune_list1, Fine_tune_list2):
     params_ = None
     # print('Fine_turn = %s' %ft1)
     print('Fine_turn = %s' %ft)
-    drop_prob = 0
+    drop_prob = ft
     pool_type=  'avg'
     pool_size = 16
     pool_stride= 2
@@ -611,12 +1198,12 @@ for ft, ft1  in zip(Fine_tune_list1, Fine_tune_list2):
     # 64832 6
     # 64960 4
     # 65024 2
-    sl = ft1
+    sl = 64256#253440#64256
 
     act_type = 'relu'# 'relu' 'elu'
-    dilate_size = ft  # 2 63808 # 3 63360
+    dilate_size = 1  # 2 63808 # 3 63360
     num_fc = 64
-    nf = 1
+    nf =1
 ################################
     for snr in SNR_list:
         print()
@@ -640,9 +1227,14 @@ for ft, ft1  in zip(Fine_tune_list1, Fine_tune_list2):
             print(train_dict['%s' %int(snr*100)].shape)
             print(test_dict['%s' %int(snr*100)].shape)
 
+        try:
+            os.listdir('./SNR%s_%s/' %(int(snr*100) ,model_name))
+        except FileNotFoundError as e:
+            print(e)
+            continue
 
 
-        address = 'SNR%s_OURs' %int(snr*100)
+        address = 'SNR%s_%s' %(int(snr*100) ,model_name)
         mkdir_checkdir(path = "./%s" %address)
 
 
@@ -654,7 +1246,11 @@ for ft, ft1  in zip(Fine_tune_list1, Fine_tune_list2):
                      , smoothing_constant = .01, SNR = 1
                      , sl=sl, pool_type=pool_type ,pool_size = pool_size,pool_stride=pool_stride
                      , act_type = act_type, dilate_size = dilate_size, nf = nf, drop_prob = drop_prob
-                     , num_fc = num_fc, num_outputs = 2, period = 256)
+                     , num_fc = num_fc, num_outputs = 2, period = 256
+                     , net = net, init_params = init_params
+                    #  , net=ft2, init_params=ft3
+                     , train_type = '1MLP'
+                     )
 
         # test_accuracy_history_final = [0]
         try:
@@ -662,11 +1258,11 @@ for ft, ft1  in zip(Fine_tune_list1, Fine_tune_list2):
                 (params, loss_history, loss_v_history, moving_loss_history, test_accuracy_history, train_accuracy_history, best_params_epoch) = info
                 # Save
                 for key, value in {'params':params
-            #                        , 'loss_history': nd.array(loss_history)
-            #                                  , 'loss_v_history': nd.array(loss_v_history)
-            #                                  , 'moving_loss_history': nd.array(moving_loss_history)
-            #                                  , 'test_accuracy_history': nd.array(test_accuracy_history)
-            #                                  , 'train_accuracy_history': nd.array(train_accuracy_history)
+                                   , 'loss_history': nd.array(loss_history)
+                                             , 'loss_v_history': nd.array(loss_v_history)
+                                             , 'moving_loss_history': nd.array(moving_loss_history)
+                                             , 'test_accuracy_history': nd.array(test_accuracy_history)
+                                             , 'train_accuracy_history': nd.array(train_accuracy_history)
                                   }.items():
 
                     # if train_accuracy_history[-1] == 1 and test_accuracy_history[-1] >= max(test_accuracy_history_final):
@@ -686,21 +1282,41 @@ for ft, ft1  in zip(Fine_tune_list1, Fine_tune_list2):
 
 
 
+    # try: 
+    #     for snr in SNR_list:
+    #         print()            
+    #         train_dict['%s' %int(snr*100)].shape
+    #         test_dict['%s' %int(snr*100)].shape
+    # except:
+    #     break
+    # net = ft2
 
     # AUC
-
+    
     AUC = {}
 
+    auc_frame = []
+    fpr_frame = []
+    tpr_frame = []
+    acc_frame = []
     SNR_MF_list = []
     for SNR_ in SNR_list:  # 不同的模型参数
         auc_ = []
-        address = './SNR%s_%s/' %(int(SNR_*100) ,model_name)
-        params_ = nd.load(address+'%s' %(os.listdir(address)[0]))
+        try:
+            address = '/floyd/input/OURs/SNR%s_%s/' %(int(SNR_*100) ,model_name)
+            params_ = nd.load(address+'%s' %([add for add in os.listdir(address) if 'params' in add ][0]))
+        except FileNotFoundError as e:
+            print(e)
+            address = './SNR%s_%s/' %(int(SNR_*100) ,model_name)
+            params_ = nd.load(address+'%s' %([add for add in os.listdir(address) if 'params' in add ][0]))
         
         SNR_MF_list.append(test_dict['%s' %int(SNR_*100)].dropna().SNR_mf.values.mean(axis=0))
         print(SNR_MF_list)
         print('%s Model for SNR = %s' %(model_name, int(SNR_*100) ) )
-
+        auc_list = []
+        fpr_list = []
+        tpr_list = []
+        acc_list = []
         for SNR in SNR_list:  # 不同的数据集
             probas_pred_ = []
             ytest_true_ = []
@@ -710,8 +1326,10 @@ for ft, ft1  in zip(Fine_tune_list1, Fine_tune_list2):
             X = nd.array(Normolise(test_dict['%s' %int(SNR*100)].drop(['mass','positions','gaps','max_peak','sigma','SNR_mf','SNR_mf0'],axis=1)))
 
             num_examples = y.shape[0]
-            if not num_examples%832:
-                batch_size = 832
+            if not num_examples%208:
+                batch_size = 208
+            elif not num_examples%128:
+                batch_size = 128            
             else:
                 print('Now! Reset the batch_size!')
                 raise
@@ -725,6 +1343,8 @@ for ft, ft1  in zip(Fine_tune_list1, Fine_tune_list2):
                 label = label.as_in_context(ctx)
                 output, _ = net(data, params_, pool_type=pool_type,pool_size = pool_size,pool_stride=pool_stride, nf=nf
                               , act_type = act_type, dilate_size = dilate_size, drop_prob = drop_prob)
+
+                              
                 
                 probas_pred_.extend(transform_softmax(output)[:,1].asnumpy())  # 保存每个概率
                 ytest_true_.extend(label.asnumpy().tolist())   # 保存每个真实标签结果
@@ -732,26 +1352,75 @@ for ft, ft1  in zip(Fine_tune_list1, Fine_tune_list2):
                 print('(Dataset(SNR = %s), complete percent: %.2f/100' %(SNR,  1.0 * batch_i *batch_size/ (num_examples) * 100) +')' , end='')
                 sys.stdout.write("\r")
             print()
+            y = nd.array(~train_dict['%s' %int(SNR*100)].sigma.isnull() +0)
+            X = nd.array(Normolise(train_dict['%s' %int(SNR*100)].drop(['mass','positions','gaps','max_peak','sigma','SNR_mf','SNR_mf0'],axis=1)))
+
+            num_examples = y.shape[0]
+            if not num_examples%208:
+                batch_size = 208
+            elif not num_examples%128:
+                batch_size = 128            
+            else:
+                print('Now! Reset the batch_size!')
+                raise
+
+            dataset_test = gluon.data.ArrayDataset(X, y)
+            train_data = gluon.data.DataLoader(dataset_test, batch_size, shuffle=True, last_batch='keep')
+            acc_list.append(evaluate_accuracy(train_data, num_examples, batch_size, params_, net,pool_type=pool_type,pool_size = pool_size,pool_stride=pool_stride
+                                            , act_type = act_type, dilate_size = dilate_size,nf=nf, drop_prob = drop_prob))
             try:
                 fpr, tpr, _ = roc_curve(ytest_true_, probas_pred_)
             except ValueError as e:
                 print(e)
                 break
-            auc_.append(auc(fpr, tpr))
 
-        AUC['%s' %int(SNR_*100)] = auc_
+            # auc_.append(auc(fpr, tpr))
+            auc = metrics.auc(fpr, tpr)
+            auc_list.append(auc)
+            fpr_list.append(fpr)
+            tpr_list.append(tpr)
+
+        auc_frame.append(auc_list)
+        fpr_frame.append(fpr_list)
+        tpr_frame.append(tpr_list)
+        acc_frame.append(acc_list)
+        print(auc_frame)
+        print(fpr_frame)
+        print(tpr_frame)
+        print(acc_frame)
         print()
         print('Finished!', end='')
-        sys.stdout.write("\r")
+        # sys.stdout.write("\r")
     np.save('AUC_%s' %(int(np.random.rand()*100)), AUC)
-    np.save('AUC_%s_old_newNoise_%s%s%s' %(model_name, Fine_tune, ft1), AUC)
-#############################################################################
+    np.save('AUC_%s_old_newNoise_%s%s' %(model_name, Fine_tune, ft), AUC)
+    MODEL = 'old'
+    np.save('./AUC_%s' %MODEL, np.array(auc_frame))
+    np.save('./fpr_%s' %MODEL, np.array(fpr_frame))
+    np.save('./tpr_%s' %MODEL, np.array(tpr_frame))
+    np.save('./ACC_%s' %MODEL, np.array(acc_frame))
 
+    break
+#############################################################################
 
 # floyd run --gpu \
 # --data wctttty/datasets/gw_colored8192/2:GW_data \
 # --data wctttty/datasets/ligo_localnoise_9_9000_8192/1:ligo_localnoise_9_9000_8192_1 \
 # --data wctttty/datasets/ligo_localnoise_9_9000_8192/2:ligo_localnoise_9_9000_8192_2 \
-# -m "OURs_old_ft_newNoise (dialute)" \
+# -m "OURs_old_ft_newNoise (modified relu)" \
 # "bash setup_floydhub.sh && python run_old_ft_newNoise.py"
 
+# floyd run --gpu \
+# --data wctttty/datasets/gw_colored8192/2:GW_data \
+# --data wctttty/datasets/ligo_localnoise_9_9000_8192/1:ligo_localnoise_9_9000_8192_1 \
+# --data wctttty/datasets/ligo_localnoise_9_9000_8192/2:ligo_localnoise_9_9000_8192_2 \
+# --data wctttty/projects/python4gw/341:num_filter4 \
+# -m "OURs_old_ft_newNoise (num_filter 4)" \
+# "bash setup_floydhub.sh && python run_old_ft_newNoise.py"
+
+# floyd run --gpu \
+# --data wctttty/datasets/gw_colored8192/2:GW_data \
+# --data wctttty/datasets/ligo_localnoise_9_9000_8192/1:ligo_localnoise_9_9000_8192_1 \
+# --data wctttty/datasets/ligo_localnoise_9_9000_8192/2:ligo_localnoise_9_9000_8192_2 \
+# --data wctttty/projects/python4gw/384:OURs \
+# -m "OURs_old_ft_newNoise (eval AUC & FPR & TPR)" \
+# "bash setup_floydhub.sh && python run_old_ft_newNoise.py"
