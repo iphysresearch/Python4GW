@@ -1245,15 +1245,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.5"
-     inkscape:cx="1278.5365"
+     inkscape:cx="838.5365"
      inkscape:cy="223.22967"
      inkscape:document-units="mm"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="g8240"
      showgrid="false"
-     inkscape:window-width="2560"
-     inkscape:window-height="1418"
+     inkscape:window-width="1440"
+     inkscape:window-height="855"
      inkscape:window-x="0"
-     inkscape:window-y="0"
+     inkscape:window-y="1"
      inkscape:window-maximized="1"
      showguides="true"
      inkscape:snap-midpoints="true"
@@ -1279,7 +1279,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -6958,7 +6958,7 @@
              id="tspan2208"
              x="114.95204"
              y="705.35236"
-             style="stroke-width:0.26458332">64@1x2044</tspan></text>
+             style="stroke-width:0.26458332">64@1x2024</tspan></text>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:4.23333311px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
@@ -7322,7 +7322,7 @@
              id="tspan8122"
              x="23.285366"
              y="599.33417"
-             style="font-size:4.23333311px;stroke-width:0.26458332">Pooling&amp;ReLu4 S4f</tspan></text>
+             style="font-size:4.23333311px;stroke-width:0.26458332">Pooling&amp;ReLu4 S4</tspan></text>
         <text
            xml:space="preserve"
            style="font-style:normal;font-weight:normal;font-size:4.23333311px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
@@ -7412,6 +7412,17 @@
              x="71.569809"
              y="509.23715"
              style="stroke-width:0.26458332">OUTPUT</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+           x="207.59158"
+           y="784.02612"
+           id="text5916"><tspan
+             sodipodi:role="line"
+             id="tspan5914"
+             x="207.59158"
+             y="793.38989"
+             style="stroke-width:0.26458332"></tspan></text>
       </g>
       <g
          transform="translate(0,66.083283)"
