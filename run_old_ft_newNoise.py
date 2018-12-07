@@ -1084,12 +1084,12 @@ def creat_data(GW_train, noise1, SNR):
         sys.stdout.write("\r")
     return data
 
-model_name = 'OURs'
-SNR_list = [0.5, 0.45, 0.4, 0.35, 0.3, 0.25,0.2, 0.15, 0.1, 0.05, 0.01]
-for SNR_ in SNR_list:  # 不同的模型参数
-    auc_ = []
-    address = '/floyd/input/OURs/SNR%s_%s/' %(int(SNR_*100) ,model_name)
-    print(address+'%s' %(os.listdir(address)[0]))
+# model_name = 'OURs'
+# SNR_list = [0.5, 0.45, 0.4, 0.35, 0.3, 0.25,0.2, 0.15, 0.1, 0.05, 0.01]
+# for SNR_ in SNR_list:  # 不同的模型参数
+#     auc_ = []
+#     address = '/floyd/input/OURs/SNR%s_%s/' %(int(SNR_*100) ,model_name)
+#     print(address+'%s' %(os.listdir(address)[0]))
 
 data_GW_train = pd.read_csv('../input/GW_data/GW_train_full.csv', index_col=0)
 print('The shape of data_GW_train: ' , data_GW_train.shape)
@@ -1133,8 +1133,13 @@ test_, train_shift_list = shuffle_data_nd(test_data,peak_samppoint, peak_time, r
 
 model_name = 'OURs'
 # SNR_list = [1, 0.8, 0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25,0.2, 0.15, 0.1, 0.05, 0.01]
-SNR_list = [0.5, 0.45, 0.4, 0.35, 0.3, 0.25,0.2, 0.15, 0.1, 0.05, 0.01]
+# SNR_list = [0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05, 0.01]
+# SNR_list = np.linspace(0.001, 0.5, num=10).tolist()[::-1]
+SNR_list = np.linspace(0.001, 0.5, num=11*2-1).tolist()[::-1]
+# SNR_list = np.linspace(0.001, 0.5, num=11*3-2).tolist()[::-1]
+# SNR_list = np.linspace(0.001, 0.5, num=11*4-3).tolist()[::-1]
 
+print(SNR_list)
 # Fine_tune = 'num_fc'
 # Fine_tune_list = [16, 32, 128, 256]
 
@@ -1184,7 +1189,11 @@ Fine_tune_list = [0]
 
 for ft in Fine_tune_list:
 # for ft1, ft2 in zip(Fine_tune_list1, Fine_tune_list2):
+    
     params_ = None
+    # params_ = nd.load('/floyd/input/OURs/SNR5_OURs/params_20' )
+    # params_ = nd.load('/floyd/input/OURs/SNR21_OURs/params_19' )
+
     # print('Fine_turn = %s' %ft1)
     print('Fine_turn = %s' %ft)
     drop_prob = ft
@@ -1204,11 +1213,17 @@ for ft in Fine_tune_list:
     dilate_size = 1  # 2 63808 # 3 63360
     num_fc = 64
     nf =1
+
+    # SNR_list_ = np.linspace(0.001, 0.5, num=11*2-1).tolist()[:10:-1]
+    SNR_list_ = np.linspace(0.001, 0.5, num=11*2-1).tolist()[-10-1::-1]
+    # SNR_list_ = np.linspace(0.001, 0.5, num=11*3-2).tolist()[:15:-1]
+    # SNR_list_ = np.linspace(0.001, 0.5, num=11*3-2).tolist()[-15-1::-1]
 ################################
-    for snr in SNR_list:
+    for snr in SNR_list_:
         print()
         print('SNR = ', snr)
-
+        
+        # test_dict = {}
 
         try: 
             print(train_dict['%s' %int(snr*100)].shape)
@@ -1281,7 +1296,7 @@ for ft in Fine_tune_list:
             os.system('rm `ls ./%s/params_*|egrep -v ./%s/params_%s`' %(address, address, best_params_epoch))    
 
 
-
+    # break
     # try: 
     #     for snr in SNR_list:
     #         print()            
@@ -1303,21 +1318,29 @@ for ft in Fine_tune_list:
     for SNR_ in SNR_list:  # 不同的模型参数
         auc_ = []
         try:
-            address = '/floyd/input/OURs/SNR%s_%s/' %(int(SNR_*100) ,model_name)
-            params_ = nd.load(address+'%s' %([add for add in os.listdir(address) if 'params' in add ][0]))
+            try:
+                address = '/floyd/input/OURs/SNR%s_%s/' %(int(SNR_*100) ,model_name)
+                params_ = nd.load(address+'%s' %(sorted([add for add in os.listdir(address) if 'params' in add ]
+                                                        ,key=lambda x :int(x.split('_')[1]))[-1]))
+            except:
+                address = '/floyd/input/OURs0/SNR%s_%s/' %(int(SNR_*100) ,model_name)
+                params_ = nd.load(address+'%s' %(sorted([add for add in os.listdir(address) if 'params' in add ]
+                                                     ,key=lambda x :int(x.split('_')[1]))[-1]))
         except FileNotFoundError as e:
             print(e)
             address = './SNR%s_%s/' %(int(SNR_*100) ,model_name)
             params_ = nd.load(address+'%s' %([add for add in os.listdir(address) if 'params' in add ][0]))
         
-        SNR_MF_list.append(test_dict['%s' %int(SNR_*100)].dropna().SNR_mf.values.mean(axis=0))
-        print(SNR_MF_list)
+
         print('%s Model for SNR = %s' %(model_name, int(SNR_*100) ) )
         auc_list = []
         fpr_list = []
         tpr_list = []
         acc_list = []
-        for SNR in SNR_list:  # 不同的数据集
+        for SNR in SNR_list_:  # 不同的数据集
+            SNR_MF_list.append(test_dict['%s' %int(SNR*100)].dropna().SNR_mf.values.mean(axis=0))
+            print(SNR)
+            print(SNR_MF_list)
             probas_pred_ = []
             ytest_true_ = []
             interlayer_ = []
@@ -1423,4 +1446,32 @@ for ft in Fine_tune_list:
 # --data wctttty/datasets/ligo_localnoise_9_9000_8192/2:ligo_localnoise_9_9000_8192_2 \
 # --data wctttty/projects/python4gw/384:OURs \
 # -m "OURs_old_ft_newNoise (eval AUC & FPR & TPR)" \
+# "bash setup_floydhub.sh && python run_old_ft_newNoise.py"
+
+
+# floyd run --gpu \
+# --data wctttty/datasets/gw_colored8192/2:GW_data \
+# --data wctttty/datasets/ligo_localnoise_9_9000_8192/1:ligo_localnoise_9_9000_8192_1 \
+# --data wctttty/datasets/ligo_localnoise_9_9000_8192/2:ligo_localnoise_9_9000_8192_2 \
+# --data wctttty/projects/python4gw/394:OURs \
+# --data wctttty/projects/python4gw/402:OURs0 \
+# -m "OURs_old_ft_newNoise (eval num=21 (10) AUC & FPR & TPR)" \
+# "bash setup_floydhub.sh && python run_old_ft_newNoise.py"
+
+
+# floyd run --gpu \
+# --data wctttty/datasets/gw_colored8192/2:GW_data \
+# --data wctttty/datasets/ligo_localnoise_9_9000_8192/1:ligo_localnoise_9_9000_8192_1 \
+# --data wctttty/datasets/ligo_localnoise_9_9000_8192/2:ligo_localnoise_9_9000_8192_2 \
+# --data wctttty/projects/python4gw/398:OURs \
+# --data wctttty/projects/python4gw/403:OURs0 \
+# -m "OURs_old_ft_newNoise (eval num=31 (15) AUC & FPR & TPR)" \
+# "bash setup_floydhub.sh && python run_old_ft_newNoise.py"
+
+# floyd run --gpu \
+# --data wctttty/datasets/gw_colored8192/2:GW_data \
+# --data wctttty/datasets/ligo_localnoise_9_9000_8192/1:ligo_localnoise_9_9000_8192_1 \
+# --data wctttty/datasets/ligo_localnoise_9_9000_8192/2:ligo_localnoise_9_9000_8192_2 \
+# --data wctttty/projects/python4gw/417:OURs \
+# -m "OURs_old_ft_newNoise (eval num=21 (10) AUC & FPR & TPR)" \
 # "bash setup_floydhub.sh && python run_old_ft_newNoise.py"
